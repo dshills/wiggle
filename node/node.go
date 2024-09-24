@@ -26,7 +26,7 @@ type Node interface {
 // that can be processed independently.
 type PartitionerNode interface {
 	Node
-	SetPartitionFunc(partitionFunc PartitionFn)
+	SetPartitionFunc(partitionFunc PartitionerFn)
 	SetChildNodes(nodes ...Node)
 }
 

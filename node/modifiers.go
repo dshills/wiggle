@@ -2,18 +2,6 @@ package node
 
 import "time"
 
-// PartitionFn is a function type that takes an input string and splits it
-// into smaller parts or tasks. It is used by PartitionerNodes to divide
-// large or complex data into manageable chunks, enabling parallel processing
-// by multiple nodes in the chain.
-type PartitionFn func(string) ([]string, error)
-
-// IntegratorFn is a function type that takes the results of partitioned tasks
-// as input and combines them into a single, coherent output. It is used by
-// IntegratorNodes to aggregate and merge processed data, ensuring that the
-// final output is consistent and meaningful.
-type IntegratorFn func([]string) Result
-
 // Logger is responsible for logging messages during the execution of nodes.
 // It provides a simple interface to track the flow of data, errors, and
 // other significant events in the system, aiding in debugging and monitoring

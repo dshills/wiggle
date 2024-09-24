@@ -2,6 +2,12 @@ package node
 
 import "strings"
 
+// PartitionerFn is a function type that takes an input string and splits it
+// into smaller parts or tasks. It is used by PartitionerNodes to divide
+// large or complex data into manageable chunks, enabling parallel processing
+// by multiple nodes in the chain.
+type PartitionerFn func(string) ([]string, error)
+
 /*
 	Partitioning
 	•	Use Sentence Splitting with Overlap as the default partitioning strategy.
