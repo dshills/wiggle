@@ -1,0 +1,14 @@
+.idea
+.run
+vendor
+.env
+dist
+.DS_Store
+.vscode
+*.swp
+tags
+.air.toml
+tmp/
+go.work
+go.work.sum
+

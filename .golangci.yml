@@ -1,0 +1,25 @@
+# To run the linter locally install it from https://golangci-lint.run/usage/install/
+# Running `golangci-lint run` in the root of this repo will pickup this config file
+linters:
+  enable:
+    - dogsled
+    - dupl
+    - errcheck
+    - goconst
+    - gofmt
+    - goimports
+    - gosec
+    - gosimple
+    - govet
+    - ineffassign
+    - loggercheck
+    - misspell
+    - nakedret
+    - revive
+    - staticcheck
+    - stylecheck
+    - typecheck
+    - unconvert
+    - unparam
+    - unused
+    - whitespace
