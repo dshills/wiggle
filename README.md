@@ -1,4 +1,4 @@
-# Wigle the Multi-Node LLM Processing Framework
+# Wiggle the Multi-Node LLM Processing Framework
 
 This Go project provides a flexible and modular framework for chaining multiple Language Learning Models (LLMs), integrating context from various sources like vector databases, and efficiently processing large or complex data by partitioning tasks across nodes and integrating results. The framework is designed to support both large models (e.g., GPT-4) and smaller models (e.g., LLaMA 3.1), ensuring scalability, modularity, and efficiency.
 
