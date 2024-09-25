@@ -66,6 +66,7 @@ type StateManager interface {
 	Register() chan struct{}
 	ShouldFail(error) bool
 	UpdateState(Signal)
+	WaitFor(nodeID string)
 }
 
 // Guidance provides a mechanism to generate structured guidance or instructions
@@ -92,10 +93,10 @@ type Coordinator interface {
 // compress or truncate the history, allowing nodes to track the progression of
 // a signal and maintain a record of its transformations throughout the workflow.
 type HistoryManager interface {
-	AddHistory(Signal)                        // Adds a new entry to history
-	CompressHistory() error                   // Compress or truncate history
-	GetHistory() []Signal                     // Retrieve full history
-	GetHistoryByID(id string) (Signal, error) // Get specific history
+	AddHistory(Signal)                          // Adds a new entry to history
+	CompressHistory() error                     // Compress or truncate history
+	GetHistory() []Signal                       // Retrieve full history
+	GetHistoryByID(id string) ([]Signal, error) // Get specific history
 }
 
 // DataCarrier provides an abstraction for handling different types of data

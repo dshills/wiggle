@@ -29,6 +29,10 @@ func (n *EmptyNode) ID() string {
 	return n.id
 }
 
+func (n *EmptyNode) MakeInputCh() {
+	n.inCh = make(chan node.Signal)
+}
+
 func (n *EmptyNode) InputCh() chan node.Signal {
 	return n.inCh
 }
@@ -112,4 +116,10 @@ func (n *EmptyNode) RateLimit(sig node.Signal) error {
 
 func (n *EmptyNode) SetStateManager(mgr node.StateManager) {
 	n.stateMgr = mgr
+}
+
+func (n *EmptyNode) UpdateState(sig node.Signal) {
+	if n.stateMgr != nil {
+		n.stateMgr.UpdateState(sig)
+	}
 }

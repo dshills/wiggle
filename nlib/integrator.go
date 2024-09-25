@@ -26,6 +26,7 @@ func NewSimpleIntegratorNode(integratorFunc node.IntegratorFn, l node.Logger, sm
 	}
 	n.SetLogger(l)
 	n.SetStateManager(sm)
+	n.MakeInputCh()
 
 	go func() {
 		select {
@@ -80,4 +81,5 @@ func (n *SimpleIntegratorNode) processSignal(signal node.Signal) {
 		n.LogErr(err)
 	}
 	signal.Response = NewStringData(finalResult)
+	n.UpdateState(signal)
 }

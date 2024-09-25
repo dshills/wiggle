@@ -72,7 +72,6 @@ func (ai *OpenAI) encodeRequest(msgs llm.MessageList) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-
 	}
 	return js, nil
 }
@@ -110,7 +109,7 @@ func (ai *OpenAI) send(ctx context.Context, baseURL string, reader io.Reader) (*
 		return nil, err
 	}
 	if len(chatResp.Choices) == 0 {
-		return nil, fmt.Errorf("No data returned")
+		return nil, fmt.Errorf("no data returned")
 	}
 
 	return &chatResp, nil

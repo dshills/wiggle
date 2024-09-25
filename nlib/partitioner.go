@@ -23,6 +23,8 @@ func NewSimplePartitionerNode(partitionFunc node.PartitionerFn, l node.Logger, s
 	}
 	n.SetLogger(l)
 	n.SetStateManager(sm)
+	n.SetID(generateUUID())
+	n.MakeInputCh()
 
 	go func() {
 		select {
@@ -63,6 +65,7 @@ func (n *SimplePartitionerNode) processSignal(signal node.Signal) {
 				child.InputCh() <- newSignal
 			}(child, part)
 		}
-		n.waitGroup.Wait()
 	}
+	n.waitGroup.Wait()
+	n.UpdateState(signal)
 }

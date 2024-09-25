@@ -43,7 +43,6 @@ func (ai *OpenAI) SetModel(model string) {
 
 func (ai *OpenAI) Model() string {
 	return ai.model
-
 }
 
 type models struct {
@@ -65,5 +64,4 @@ func (m models) AsModels() []llm.Model {
 		mods = append(mods, llmMod)
 	}
 	return mods
-
 }

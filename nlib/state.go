@@ -16,16 +16,15 @@ var _ node.StateManager = (*SimpleStateManager)(nil)
 type SimpleStateManager struct {
 	stateMap   map[string]node.State // Mapping of NodeID to state
 	mu         sync.Mutex
-	fail       chan struct{}
 	errList    []error
 	errStrings []string
 	doneChs    []chan struct{}
+	nodeWaitID string
 }
 
 func NewSimpleStateManager() *SimpleStateManager {
-	return &SimpleStateManager{
-		stateMap: make(map[string]node.State),
-	}
+	sm := SimpleStateManager{stateMap: make(map[string]node.State)}
+	return &sm
 }
 
 func (s *SimpleStateManager) UpdateState(sig node.Signal) {
@@ -41,6 +40,10 @@ func (s *SimpleStateManager) UpdateState(sig node.Signal) {
 	}
 	st.Status = sig.Status
 	s.stateMap[sig.NodeID] = st
+
+	if s.nodeWaitID == sig.NodeID {
+		s.Complete()
+	}
 }
 
 func (s *SimpleStateManager) GetState(signal node.Signal) node.State {
@@ -52,19 +55,19 @@ func (s *SimpleStateManager) GetState(signal node.Signal) node.State {
 	return node.State{Status: "unknown"}
 }
 
-func (nm *SimpleStateManager) Register() chan struct{} {
+func (s *SimpleStateManager) Register() chan struct{} {
 	ch := make(chan struct{})
-	nm.doneChs = append(nm.doneChs, ch)
+	s.doneChs = append(s.doneChs, ch)
 	return ch
 }
 
-func (nm *SimpleStateManager) ShouldFail(err error) bool {
-	for _, e := range nm.errList {
+func (s *SimpleStateManager) ShouldFail(err error) bool {
+	for _, e := range s.errList {
 		if errors.Is(err, e) {
 			return true
 		}
 	}
-	for _, es := range nm.errStrings {
+	for _, es := range s.errStrings {
 		if es == err.Error() {
 			return true
 		}
@@ -72,8 +75,14 @@ func (nm *SimpleStateManager) ShouldFail(err error) bool {
 	return false
 }
 
-func (nm *SimpleStateManager) Complete() {
-	for _, ch := range nm.doneChs {
+func (s *SimpleStateManager) Complete() {
+	for _, ch := range s.doneChs {
 		ch <- struct{}{}
 	}
+}
+
+func (s *SimpleStateManager) WaitFor(nodeid string) {
+	s.nodeWaitID = nodeid
+	done := s.Register()
+	<-done
 }

@@ -34,12 +34,13 @@ type Meta struct {
 
 // NewSignal will return a new Signal. This is typically used to generate the
 // initial Signal at the start of processing
-func NewSignal(id string, cm ContextManager, hx HistoryManager, meta ...Meta) Signal {
+func NewSignal(id string, cm ContextManager, hx HistoryManager, task DataCarrier, meta ...Meta) Signal {
 	return Signal{
-		NodeID:  id,
-		Context: cm,
-		History: hx,
-		Meta:    meta,
+		NodeID:   id,
+		Context:  cm,
+		History:  hx,
+		Meta:     meta,
+		Response: task, // Nodes read tasks from the previous response
 	}
 }
 

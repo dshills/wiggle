@@ -2,6 +2,7 @@ package nlib
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/dshills/wiggle/llm"
@@ -21,25 +22,32 @@ func NewAINode(lm llm.LLM, l node.Logger, sm node.StateManager) node.Node {
 	ai.SetID(generateUUID())
 	ai.SetStateManager(sm)
 	ai.SetLogger(l)
+	ai.MakeInputCh()
+
+	go ai.listen()
+
 	return &ai
 }
 
-func (n *AINode) Listen() {
+func (n *AINode) listen() {
 	var err error
 	var ctx = context.TODO()
 	select {
 	case sig := <-n.inCh:
+		n.LogInfo("Received signal")
 		if n.RateLimit(sig) != nil {
 			time.Sleep(1 * time.Second)
 		}
+		sig = node.SignalFromSignal(n.ID(), sig)
 		sig, err = n.RunBeforeHook(sig)
 		if err != nil {
 			n.LogErr(err)
 		}
-		sig, err = n.guide.Generate(sig)
+		sig, err = n.GenGuidance(sig)
 		if err != nil {
 			n.LogErr(err)
 		}
+		n.LogInfo(fmt.Sprintf("Sending to llm: %v", sig.Data.String()))
 		sig, err := n.callLLM(ctx, sig)
 		if err != nil {
 			n.LogErr(err)
@@ -48,6 +56,7 @@ func (n *AINode) Listen() {
 		if err != nil {
 			n.LogErr(err)
 		}
+		n.UpdateState(sig)
 		n.sendToConnected(sig)
 	case <-n.doneCh:
 		return
