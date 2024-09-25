@@ -16,10 +16,13 @@ Table of Contents
 - [Guidance](#Guidance)
 - [PartitionerNode](#PartitionerNode)
 - [IntegratorNode](#IntegratorNode)
+- [Set](#Set)
+- [Hooks](#Hooks)
 - [Coordinator](#Coordinator)
-- [Error Handling](#Error-Handling)
 - [Resource Management](#Resource-Management)
-- [Advanced Usage](#Advanced-Usage)
+- [Context Management](#Context-Management)
+- [DataCarrier](#DataCarrier)
+- [Example Workflow](#Example-Workflow)
 - [Contributing](#Contributing)
 - [License](#license)
 
@@ -66,73 +69,50 @@ Here’s a simple example that demonstrates sending a signal to multiple nodes, 
 package main
 
 func main() {
-    logger := &ConsoleLogger{}
-    coordinator := NewSimpleCoordinator(10 * time.Second)
-
-    node1 := NewSimpleNode("node1", ActionPrint)
-    node2 := NewSimpleNode("node2", ActionPrint)
-
-    signal := Signal{
-        NodeID:  "node1",
-        Data:    MessageData{Message: "Some input data"},
-        Context: "Example context",
-    }
-
-    go func() {
-        node1.InputCh() <- signal
-    }()
-
-    err := coordinator.WaitForCompletion(node1, node2)
-    if err != nil {
-        fmt.Println("Error waiting for nodes:", err)
-    } else {
-        fmt.Println("All nodes completed successfully.")
-    }
+    // TODO
 }
 ```
 
 In this example:
 
-- We define two simple nodes that print the signal they receive.
-- The Coordinator ensures the nodes process the signal within a specified timeout.
+- TODO
 
 ## Core Concepts
 
 ### Node
 
-A Node represents a processing unit in the system. Each node processes a Signal, potentially transforming it, querying an LLM, or passing it to other nodes.
+A Node is the core processing unit in Wiggle. It processes incoming signals, executes actions (such as querying a model or transforming data), and forwards the processed signal to connected nodes. The interface is modular, allowing different node types to be chained together for flexible workflows.
 
 ```go
 type Node interface {
-    Clone() Node
-    Connect(Node) error
+    Connect(Node)
     ID() string
     InputCh() chan Signal
+    SetGuidance(Guidance)
+    SetHooks(Hooks)
     SetID(string)
     SetLogger(Logger)
-    SetErrorHandler(ErrorHandler)
-    SetCoordinator(Coordinator)
     SetResourceManager(ResourceManager)
-    SetHooks(NodeHooks)
     SetStateManager(StateManager)
-    Wait()
 }
 ```
 
 ### Signal
 
-A Signal carries the data, context, and metadata across nodes. It represents the input/output of a node.
+A Signal represents the data structure passed between nodes, containing the main data being processed, its context, and any metadata or history required. It ensures smooth and coherent propagation of data and context across the entire node chain.
 
 ```go
 type Signal struct {
-    NodeID   string
-    Data     DataCarrier
-    Context  string
-    Meta     []Meta
-    History  HistoryManager
+	NodeID   string
+	Data     DataCarrier
+	Response DataCarrier
+	Context  ContextManager
+	Meta     []Meta
+	History  HistoryManager
+	Err      error
+	Status   string
 }
 ```
-
 ### Guidance
 
 Guidance generates structured instructions for processing based on the signal’s content and metadata. It typically interfaces with an LLM.
@@ -145,25 +125,48 @@ type Guidance interface {
 
 ### PartitionerNode
 
-A PartitionerNode splits input data into smaller tasks, distributing them across child nodes for parallel processing.
+A PartitionerNode splits large or complex tasks into smaller chunks using a partitioning function (PartitionerFn), enabling parallel processing by downstream nodes. This design allows for efficient handling of large-scale data processing.
 
 ```go
 type PartitionerNode interface {
     Node
-    SetPartitionFunc(partitionFunc PartitionFn)
+    SetPartitionFunc(partitionFunc PartitionerFn)
     SetChildNodes(nodes ...Node)
 }
 ```
 
 ### IntegratorNode
 
-An IntegratorNode gathers results from child nodes and combines them into a single coherent output.
+The IntegratorNode aggregates the results from partitioned tasks using an integrator function (IntegratorFn). This ensures that all the partitioned results are combined into a single, coherent output, maintaining data consistency throughout the workflow.
 
 ```go
 type IntegratorNode interface {
     Node
     SetIntegratorFunc(integratorFunc IntegratorFn)
     SetChildNodes(nodes ...Node)
+}
+```
+
+### Set
+
+A Set represents a collection of nodes that form a processing pipeline. It organizes nodes into a structured chain and manages the flow of data between them. A set allows you to define a complex workflow with multiple interconnected nodes.
+
+```go
+type Set interface {
+    Node
+    SetStartNode(Node)
+    SetCoordinator(Coordinator)
+}
+```
+
+### Hooks
+
+The Hooks interface allows custom pre- and post-processing logic to be executed before or after a node processes a signal. This is useful for validation, logging, or modifying results before the data moves forward.
+
+```go
+type Hooks interface {
+    BeforeAction(Signal) (Signal, error)
+    AfterAction(Signal) (Signal, error)
 }
 ```
 
@@ -178,16 +181,6 @@ type Coordinator interface {
 }
 ```
 
-### Error Handling
-
-The ErrorHandler defines how errors are handled during node processing. It allows you to decide whether the workflow should continue or halt when errors occur.
-
-```go
-type ErrorHandler interface {
-    HandleError(Signal, error) bool
-}
-```
-
 ### Resource Management
 
 The ResourceManager controls resource usage (e.g., rate limiting) to prevent overwhelming external systems like LLM APIs or databases.
@@ -198,51 +191,40 @@ type ResourceManager interface {
 }
 ```
 
-## Advanced Usage
+### Context Management
 
-You can easily extend this framework by implementing additional Node, Guidance, or other interfaces, adding custom logic as needed. For instance, you could build more complex workflows using partitioners, integrators, and external vector databases for context retrieval.
-
-### Partitioning and Integration Example
-
-Here’s an example using partitioners and integrators to process and combine results from multiple tasks.
+A ContextManager manages the contextual data passed between nodes, ensuring that relevant information is consistent as the signal flows through the node chain.
 
 ```go
-func main() {
-    partitioner := NewSimplePartitionerNode("partitioner", SentenceSplittingWithOverlap)
-    integrator := NewSimpleIntegratorNode("integrator", SimpleConcatenationIntegrator)
-
-    // Set up child nodes
-    child1 := NewSimpleNode("child1", ActionPrint)
-    child2 := NewSimpleNode("child2", ActionPrint)
-    child3 := NewSimpleNode("child3", ActionPrint)
-
-    // Configure partitioner and integrator
-    partitioner.SetChildNodes(child1, child2, child3)
-    integrator.SetChildNodes(child1, child2, child3)
-
-    signal := Signal{
-        NodeID:  "partitioner",
-        Data:    MessageData{Message: "Some complex input data to partition"},
-    }
-
-    // Send signal to partitioner
-    go func() {
-        partitioner.InputCh() <- signal
-    }()
-
-    // Wait for completion
-    err := integrator.WaitForCompletion(child1, child2, child3)
-    if err != nil {
-        fmt.Println("Error:", err)
-    } else {
-        fmt.Println("Integration complete")
-    }
+type ContextManager interface {
+    SetContext(key string, data DataCarrier)
+    RemoveContext(key string)
+    GetContext(key string) (DataCarrier, error)
 }
 ```
 
+### DataCarrier
+
+The DataCarrier provides an abstraction for handling different types of data, such as strings, JSON, or vectors, within a signal. It ensures flexibility in how data is passed and processed across the workflow.
+
+```go
+type DataCarrier interface {
+    Vector() []float32
+    String() string
+    JSON() []byte
+}
+```
+
+## Example Workflow
+
+1. A PartitionerNode receives a signal containing a large chunk of data and uses its partition function to split the data into smaller chunks.
+2. The smaller chunks are distributed to downstream Action Nodes or other specialized nodes for processing.
+3. After processing, the results are aggregated by an IntegratorNode, which combines the partitioned data into a single output.
+4. The Set orchestrates this entire workflow, ensuring that nodes are connected and coordinated.
+
 ## Contributing
 
-We welcome contributions! If you’d like to improve this framework or report issues, feel free to create a pull request or open an issue.
+Wiggle is under heavy development and we welcome ideas and contributions.  If you’d like to improve this framework or report issues, feel free to create a pull request or open an issue.
 
 ## License
 
