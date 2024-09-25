@@ -6,18 +6,22 @@ package node
 // enabling different types of nodes (e.g., action nodes, query nodes, partitioners, integrators)
 // to be chained together, ensuring flexible and scalable workflows.
 type Node interface {
-	Clone() Node
-	Connect(Node) error
+	Connect(Node)
 	ID() string
 	InputCh() chan Signal
-	SetErrorHandler(ErrorHandler)
 	SetGuidance(Guidance)
-	SetHooks(NodeHooks)
+	SetHooks(Hooks)
 	SetID(string)
 	SetLogger(Logger)
 	SetResourceManager(ResourceManager)
 	SetStateManager(StateManager)
 }
+
+// PartitionerFn is a function type that takes an input string and splits it
+// into smaller parts or tasks. It is used by PartitionerNodes to divide
+// large or complex data into manageable chunks, enabling parallel processing
+// by multiple nodes in the chain.
+type PartitionerFn func(string) ([]string, error)
 
 // PartitionerNode splits the input signal into smaller tasks or chunks
 // using a specified partition function. These partitions are then distributed
@@ -29,6 +33,12 @@ type PartitionerNode interface {
 	SetPartitionFunc(partitionFunc PartitionerFn)
 	SetChildNodes(nodes ...Node)
 }
+
+// IntegratorFn is a function type that takes the results of partitioned tasks
+// as input and combines them into a single, coherent output. It is used by
+// IntegratorNodes to aggregate and merge processed data, ensuring that the
+// final output is consistent and meaningful.
+type IntegratorFn func([]string) (string, error)
 
 // IntegratorNode gathers and combines the results from multiple child nodes
 // into a single coherent output using a specified integrator function.

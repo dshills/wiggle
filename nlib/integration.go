@@ -1,16 +1,10 @@
-package node
+package nlib
 
 import (
 	"strings"
 
 	"github.com/dshills/wiggle/llm"
 )
-
-// IntegratorFn is a function type that takes the results of partitioned tasks
-// as input and combines them into a single, coherent output. It is used by
-// IntegratorNodes to aggregate and merge processed data, ensuring that the
-// final output is consistent and meaningful.
-type IntegratorFn func([]string) (string, error)
 
 /*
 	Integration

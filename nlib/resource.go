@@ -1,9 +1,14 @@
-package node
+package nlib
 
 import (
 	"fmt"
 	"time"
+
+	"github.com/dshills/wiggle/node"
 )
+
+// Compile-time check
+var _ node.ResourceManager = (*SimpleResourceManager)(nil)
 
 // SimpleResourceManager implements rate limiting to control the number of requests
 // a node can process within a specified time. It ensures efficient use of system
@@ -33,7 +38,7 @@ func NewSimpleResourceManager(maxRequestsPerSecond int) *SimpleResourceManager {
 	return manager
 }
 
-func (r *SimpleResourceManager) RateLimit(signal Signal) error {
+func (r *SimpleResourceManager) RateLimit(signal node.Signal) error {
 	select {
 	case <-r.requests:
 		// Continue processing

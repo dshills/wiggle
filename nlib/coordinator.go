@@ -1,12 +1,8 @@
-package node
+package nlib
 
-import (
-	"fmt"
-	"sync"
-	"time"
-
-	"github.com/dshills/wiggle/llm"
-)
+/*
+// Compile-time check
+var _ node.Coordinator = (*SimpleCoordinator)(nil)
 
 // SimpleCoordinator manages the execution flow across multiple nodes by sending
 // signals through each node's input channel. It synchronizes node processing, waits
@@ -20,18 +16,18 @@ func NewSimpleCoordinator(timeout time.Duration) *SimpleCoordinator {
 	return &SimpleCoordinator{timeout: timeout}
 }
 
-func (c *SimpleCoordinator) WaitForCompletion(nodes ...Node) error {
+func (c *SimpleCoordinator) WaitForCompletion(nodes ...node.Node) error {
 	var wg sync.WaitGroup
 	errCh := make(chan error, len(nodes))
 
 	// Start processing for each node by sending a signal to its input channel
-	for _, node := range nodes {
+	for _, nd := range nodes {
 		wg.Add(1)
-		go func(n Node) {
+		go func(n node.Node) {
 			defer wg.Done()
 
 			// Create a signal for this node
-			signal := Signal{NodeID: n.ID(), Data: MessageData{Message: "Trigger processing"}}
+			//signal := node.Signal{NodeID: n.ID(), Data: MessageData{Message: "Trigger processing"}}
 
 			// Send the signal to the node's input channel
 			select {
@@ -42,7 +38,7 @@ func (c *SimpleCoordinator) WaitForCompletion(nodes ...Node) error {
 			case <-time.After(c.timeout):
 				errCh <- fmt.Errorf("timeout on node %s", n.ID())
 			}
-		}(node)
+		}(nd)
 	}
 
 	// Wait for all nodes to finish
@@ -89,3 +85,4 @@ func (m MessageData) ToJSON() string {
 func (m MessageData) ToVector() []float32 {
 	return nil
 }
+*/

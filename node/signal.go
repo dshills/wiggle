@@ -1,7 +1,5 @@
 package node
 
-import "github.com/dshills/wiggle/llm"
-
 // Signal represents the core data structure passed between nodes in a processing chain.
 // It contains the data being processed, contextual information, metadata, response data,
 // and a history of transformations. Signals enable the flow of information across nodes,
@@ -10,19 +8,18 @@ import "github.com/dshills/wiggle/llm"
 type Signal struct {
 	NodeID   string
 	Data     DataCarrier
-	Response llm.Message
-	Context  string
+	Response DataCarrier
+	Context  ContextManager
 	Meta     []Meta
 	History  HistoryManager
+	Err      error
+	Status   string
 }
 
-// Result encapsulates the outcome of processing a signal within a node.
-// It contains the processed value and any error encountered during execution.
-// The Result struct allows nodes to communicate the success or failure of a task
-// and pass along the output for further processing in the workflow.
-type Result struct {
-	Value string
-	Error error
+func (s *Signal) SetContext(forID string, data DataCarrier) {
+	if s.Context != nil {
+		s.Context.SetContext(forID, data)
+	}
 }
 
 // Meta represents key-value pairs of metadata associated with a signal.
@@ -35,22 +32,27 @@ type Meta struct {
 	Value string
 }
 
-// HistoryManager is responsible for managing the history of signals as they pass
-// through nodes. It provides methods to add entries, retrieve, and optionally
-// compress or truncate the history, allowing nodes to track the progression of
-// a signal and maintain a record of its transformations throughout the workflow.
-type HistoryManager interface {
-	AddHistory(Signal, Signal) error // Adds a new entry to history
-	CompressHistory(Signal) error    // Compress or truncate history
-	GetHistory(Signal) []Signal      // Retrieve full history
+// NewSignal will return a new Signal. This is typically used to generate the
+// initial Signal at the start of processing
+func NewSignal(id string, cm ContextManager, hx HistoryManager, meta ...Meta) Signal {
+	return Signal{
+		NodeID:  id,
+		Context: cm,
+		History: hx,
+		Meta:    meta,
+	}
 }
 
-// DataCarrier provides an abstraction for handling different types of data
-// within a signal. It allows for conversion of the data into various formats,
-// such as message lists, JSON, or vectors, ensuring flexibility in how data
-// is passed between nodes and processed in different stages of the workflow.
-type DataCarrier interface {
-	ToMessageList() llm.MessageList
-	ToJSON() string
-	ToVector() []float32
+// SignalFromSignal will save the original Signal in history
+// Convert the response to the incomming data and update the
+// NodeID. This is commonly used when a Node receives a signal
+// from the previous Node
+func SignalFromSignal(id string, sig Signal) Signal {
+	if sig.History != nil {
+		sig.History.AddHistory(sig)
+	}
+	sig.Data = sig.Response
+	sig.NodeID = id
+	sig.Response = nil
+	return sig
 }

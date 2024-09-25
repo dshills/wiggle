@@ -1,6 +1,8 @@
 package node
 
-import "time"
+import (
+	"time"
+)
 
 // Logger is responsible for logging messages during the execution of nodes.
 // It provides a simple interface to track the flow of data, errors, and
@@ -8,15 +10,6 @@ import "time"
 // the behavior of nodes in a chain of tasks.
 type Logger interface {
 	Log(string)
-}
-
-// ErrorHandler defines how errors are managed during node execution. It provides
-// a mechanism to handle errors encountered in a node's processing logic and
-// determines whether the workflow should continue or halt based on the nature
-// of the error. This interface helps to create robust error management strategies
-// across a chain of nodes.
-type ErrorHandler interface {
-	HandleError(Signal, error) bool
 }
 
 // ResourceManager handles the allocation and management of resources
@@ -33,18 +26,28 @@ type ResourceManager interface {
 // and consistent as it flows through the node chain. This interface helps
 // maintain continuity and relevance in processing workflows.
 type ContextManager interface {
-	UpdateContext(Signal) (string, error)
-	GetContext(Signal) string
+	SetContext(key string, data DataCarrier)
+	RemoveContext(key string)
+	GetContext(key string) (DataCarrier, error)
 }
 
-// NodeHooks provides lifecycle hooks that allow custom logic to be executed
+// HookFn is used to transform Signals. It is used with the Hooks interface
+type HookFn func(Signal) (Signal, error)
+
+// Hooks provides lifecycle hooks that allow custom logic to be executed
 // before and after a node processes a signal. The interface allows for
 // pre-processing, such as input validation or logging, and post-processing,
 // such as result modification or cleanup, giving more control over the
 // execution flow in a chain of nodes.
-type NodeHooks interface {
-	BeforeAction(Signal) Result
-	AfterAction(Signal) Result
+type Hooks interface {
+	BeforeAction(Signal) (Signal, error)
+	AfterAction(Signal) (Signal, error)
+}
+
+type State struct {
+	Completed int
+	Failures  int
+	Status    string
 }
 
 // StateManager is responsible for tracking and updating the state of a signal
@@ -52,9 +55,17 @@ type NodeHooks interface {
 // the current state, ensuring that each node can access the relevant status
 // information. This interface helps maintain workflow consistency and manage
 // state transitions across complex processes.
+// Defines how state and errors are managed during node execution. It provides
+// a mechanism to handle errors encountered in a node's processing logic and
+// determines whether the workflow should continue or halt based on the nature
+// of the error. This interface helps to create robust error management strategies
+// across a chain of nodes.
 type StateManager interface {
-	UpdateState(Signal, string) error
-	GetState(Signal) string
+	Complete()
+	GetState(Signal) State
+	Register() chan struct{}
+	ShouldFail(error) bool
+	UpdateState(Signal)
 }
 
 // Guidance provides a mechanism to generate structured guidance or instructions
@@ -74,4 +85,25 @@ type Guidance interface {
 type Coordinator interface {
 	WaitForCompletion(nodes ...Node) error
 	CancelOnTimeout(duration time.Duration)
+}
+
+// HistoryManager is responsible for managing the history of signals as they pass
+// through nodes. It provides methods to add entries, retrieve, and optionally
+// compress or truncate the history, allowing nodes to track the progression of
+// a signal and maintain a record of its transformations throughout the workflow.
+type HistoryManager interface {
+	AddHistory(Signal)                        // Adds a new entry to history
+	CompressHistory() error                   // Compress or truncate history
+	GetHistory() []Signal                     // Retrieve full history
+	GetHistoryByID(id string) (Signal, error) // Get specific history
+}
+
+// DataCarrier provides an abstraction for handling different types of data
+// within a signal. It allows for conversion of the data into various formats,
+// such as string, JSON, or vectors, ensuring flexibility in how data
+// is passed between nodes and processed in different stages of the workflow.
+type DataCarrier interface {
+	Vector() []float32
+	String() string
+	JSON() []byte
 }
