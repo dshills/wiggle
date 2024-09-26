@@ -17,9 +17,9 @@ type AINode struct {
 	lm llm.LLM
 }
 
-func NewAINode(lm llm.LLM, l node.Logger, sm node.StateManager) node.Node {
+func NewAINode(lm llm.LLM, l node.Logger, sm node.StateManager, name string) node.Node {
 	ai := AINode{lm: lm}
-	ai.SetID(generateUUID())
+	ai.SetID(name)
 	ai.SetStateManager(sm)
 	ai.SetLogger(l)
 	ai.MakeInputCh()

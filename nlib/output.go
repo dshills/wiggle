@@ -12,9 +12,9 @@ type OutputStringNode struct {
 	w io.Writer
 }
 
-func NewOutputStringNode(w io.Writer, l node.Logger, sm node.StateManager) *OutputStringNode {
+func NewOutputStringNode(w io.Writer, l node.Logger, sm node.StateManager, name string) *OutputStringNode {
 	n := OutputStringNode{w: w}
-	n.SetID(generateUUID())
+	n.SetID(name)
 	n.SetLogger(l)
 	n.SetStateManager(sm)
 	n.MakeInputCh()

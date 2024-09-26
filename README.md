@@ -77,12 +77,13 @@ import (
 	"github.com/dshills/wiggle/node"
 )
 
+const envURL = "OPENAI_API_URL"
+const envKey = "OPENAI_API_KEY"
+const model = "gpt-4o"
+
 func main() {
 	// Setup LLM
-	baseURL := os.Getenv("OPENAI_API_URL")
-	apiKey := os.Getenv("OPENAI_API_KEY")
-	model := "gpt-4o"
-	lm := openai.New(baseURL, model, apiKey, nil)
+	lm := openai.New(os.Getenv(envURL), model, os.Getenv(envKey), nil)
 
 	// Create a Logger
 	logger := nlib.NewSimpleLogger(log.Default())
@@ -93,17 +94,12 @@ func main() {
 	// Define output writer
 	writer := os.Stdout
 
-	// Create an AI Node
-	firstNode := nlib.NewAINode(lm, logger, stateMgr)
-	firstNode.SetID("AI Node")
-    // Create an Output Node
-	outNode := nlib.NewOutputStringNode(writer, logger, stateMgr)
-	outNode.SetID("Output Node")
-
-    // Connect them
+	// Create Nodes
+	firstNode := nlib.NewAINode(lm, logger, stateMgr, "AI Node")
+	outNode := nlib.NewOutputStringNode(writer, logger, stateMgr, "Output Node")
 	firstNode.Connect(outNode)
 
-	// Send initial Signal
+	// Send it
 	firstNode.InputCh() <- nlib.NewDefaultSignal(firstNode, "Why is the sky blue?")
 
 	// Wait for the output node to print the result

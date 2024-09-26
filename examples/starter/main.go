@@ -8,12 +8,13 @@ import (
 	"github.com/dshills/wiggle/nlib"
 )
 
+const envURL = "OPENAI_API_URL"
+const envKey = "OPENAI_API_KEY"
+const model = "gpt-4o"
+
 func main() {
 	// Setup LLM
-	baseURL := os.Getenv("OPENAI_API_URL")
-	apiKey := os.Getenv("OPENAI_API_KEY")
-	model := "gpt-4o"
-	lm := openai.New(baseURL, model, apiKey, nil)
+	lm := openai.New(os.Getenv(envURL), model, os.Getenv(envKey), nil)
 
 	// Create a Logger
 	logger := nlib.NewSimpleLogger(log.Default())
@@ -25,10 +26,8 @@ func main() {
 	writer := os.Stdout
 
 	// Create Nodes
-	firstNode := nlib.NewAINode(lm, logger, stateMgr)
-	firstNode.SetID("AI Node")
-	outNode := nlib.NewOutputStringNode(writer, logger, stateMgr)
-	outNode.SetID("Output Node")
+	firstNode := nlib.NewAINode(lm, logger, stateMgr, "AI Node")
+	outNode := nlib.NewOutputStringNode(writer, logger, stateMgr, "Output Node")
 	firstNode.Connect(outNode)
 
 	// Send it
