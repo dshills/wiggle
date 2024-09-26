@@ -20,17 +20,21 @@ func NewOutputStringNode(w io.Writer, l node.Logger, sm node.StateManager, name 
 	n.MakeInputCh()
 
 	go func() {
-		select {
-		case sig := <-n.inCh:
-			sig = node.SignalFromSignal(n.ID(), sig)
-			n.LogInfo("Received signal")
-			_, err := n.w.Write([]byte(sig.Data.String()))
-			if err != nil {
-				n.LogErr(err)
+		for {
+			select {
+			case sig := <-n.inCh:
+				sig = n.PreProcessSignal(sig)
+
+				_, err := n.w.Write([]byte(sig.Data.String()))
+				if err != nil {
+					n.LogErr(err)
+				}
+
+				n.PostProcesSignal(sig)
+
+			case <-n.doneCh:
+				return
 			}
-			n.UpdateState(sig)
-		case <-n.doneCh:
-			return
 		}
 	}()
 

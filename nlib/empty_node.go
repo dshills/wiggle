@@ -2,6 +2,7 @@ package nlib
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/dshills/wiggle/node"
 )
@@ -9,6 +10,7 @@ import (
 // Compile-time check
 var _ node.Node = (*EmptyNode)(nil)
 
+// EmptyNode is the boiler plate code for a node.Node
 type EmptyNode struct {
 	nodes       []node.Node
 	id          string
@@ -23,6 +25,13 @@ type EmptyNode struct {
 
 func (n *EmptyNode) Connect(nn ...node.Node) {
 	n.nodes = append(n.nodes, nn...)
+}
+
+func (n *EmptyNode) SendToConnected(sig node.Signal) {
+	for _, conNode := range n.nodes {
+		n.LogInfo(fmt.Sprintf("Sending to %s", conNode.ID()))
+		conNode.InputCh() <- sig // Send the signal to each node's input channel
+	}
 }
 
 func (n *EmptyNode) ID() string {
@@ -122,4 +131,36 @@ func (n *EmptyNode) UpdateState(sig node.Signal) {
 	if n.stateMgr != nil {
 		n.stateMgr.UpdateState(sig)
 	}
+}
+
+func (n *EmptyNode) PreProcessSignal(sig node.Signal) node.Signal {
+	n.LogInfo("Received signal")
+	// Rate limiting check
+	if n.RateLimit(sig) != nil {
+		time.Sleep(1 * time.Second) // If rate-limited, pause for 1 second
+	}
+
+	// Create a new signal based on the current one, but with updated node ID
+	sig = node.SignalFromSignal(n.ID(), sig)
+
+	// Run any registered before-action hooks
+	sig, err := n.RunBeforeHook(sig)
+	if err != nil {
+		n.LogErr(err) // Log any errors from the before-hook
+	}
+	return sig
+}
+
+func (n *EmptyNode) PostProcesSignal(sig node.Signal) {
+	// Run any registered after-action hooks
+	sig, err := n.RunAfterHook(sig)
+	if err != nil {
+		n.LogErr(err) // Log any errors from the after-hook
+	}
+
+	// Update the state of the signal after processing
+	n.UpdateState(sig)
+
+	// Send the processed signal to connected nodes
+	n.SendToConnected(sig)
 }

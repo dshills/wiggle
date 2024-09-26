@@ -1,88 +1,58 @@
 package nlib
 
-/*
-// Compile-time check
+import (
+	"errors"
+	"sync"
+	"time"
+
+	"github.com/dshills/wiggle/node"
+)
+
+// Compile-time check to ensure SimpleCoordinator implements the node.Coordinator interface.
 var _ node.Coordinator = (*SimpleCoordinator)(nil)
 
-// SimpleCoordinator manages the execution flow across multiple nodes by sending
-// signals through each node's input channel. It synchronizes node processing, waits
-// for completion using a timeout mechanism, and handles errors if any node encounters issues.
-// This ensures that workflows proceed smoothly or fail gracefully.
+// SimpleCoordinator is responsible for managing the synchronization and execution flow across multiple nodes.
 type SimpleCoordinator struct {
-	timeout time.Duration
+	timeout time.Duration // Duration to wait for node completion before timing out
 }
 
-func NewSimpleCoordinator(timeout time.Duration) *SimpleCoordinator {
-	return &SimpleCoordinator{timeout: timeout}
+// NewSimpleCoordinator creates a new instance of SimpleCoordinator.
+func NewSimpleCoordinator() *SimpleCoordinator {
+	return &SimpleCoordinator{}
 }
 
+// WaitForCompletion waits for all the given nodes to signal their completion.
 func (c *SimpleCoordinator) WaitForCompletion(nodes ...node.Node) error {
 	var wg sync.WaitGroup
 	errCh := make(chan error, len(nodes))
 
-	// Start processing for each node by sending a signal to its input channel
-	for _, nd := range nodes {
-		wg.Add(1)
+	// Add all nodes to the wait group
+	wg.Add(len(nodes))
+
+	for _, n := range nodes {
 		go func(n node.Node) {
 			defer wg.Done()
-
-			// Create a signal for this node
-			//signal := node.Signal{NodeID: n.ID(), Data: MessageData{Message: "Trigger processing"}}
-
-			// Send the signal to the node's input channel
 			select {
-			case n.InputCh() <- signal:
-				// Wait for processing
-				// Assume that nodes communicate any errors through their InputCh processing
-				// If node-specific error handling is required, it could be added here
-			case <-time.After(c.timeout):
-				errCh <- fmt.Errorf("timeout on node %s", n.ID())
+			case <-n.InputCh(): // Assuming nodes signal their completion via input channel
+				// Node has completed processing
+			case <-time.After(c.timeout): // Timeout if the node takes too long
+				errCh <- errors.New("timeout waiting for node " + n.ID())
 			}
-		}(nd)
+		}(n)
 	}
 
-	// Wait for all nodes to finish
-	doneCh := make(chan struct{})
-	go func() {
-		wg.Wait()
-		close(doneCh)
-	}()
+	// Wait for all nodes to complete or return an error on timeout
+	wg.Wait()
+	close(errCh)
 
-	// Handle timeout or errors
-	select {
-	case <-doneCh:
-		// All nodes completed successfully
-		return nil
-	case err := <-errCh:
-		// Return the first error that occurred
-		return err
-	case <-time.After(c.timeout):
-		// Timeout exceeded
-		return fmt.Errorf("timeout exceeded while waiting for nodes to complete")
+	// Return any error encountered during execution
+	if len(errCh) > 0 {
+		return <-errCh
 	}
+	return nil
 }
 
+// CancelOnTimeout cancels the waiting process if it exceeds the given timeout duration.
 func (c *SimpleCoordinator) CancelOnTimeout(duration time.Duration) {
 	c.timeout = duration
 }
-
-// MessageData implements the DataCarrier interface for carrying simple string messages.
-type MessageData struct {
-	Message string
-}
-
-// ToMessageList returns a message list with the content of the MessageData.
-func (m MessageData) ToMessageList() llm.MessageList {
-	return llm.MessageList{llm.Message{Content: m.Message}}
-}
-
-// ToJSON converts the message data to a JSON string.
-func (m MessageData) ToJSON() string {
-	return fmt.Sprintf(`{"message": "%s"}`, m.Message)
-}
-
-// ToVector is not applicable for MessageData, so we return nil here.
-func (m MessageData) ToVector() []float32 {
-	return nil
-}
-*/

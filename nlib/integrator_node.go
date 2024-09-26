@@ -52,8 +52,10 @@ func (n *SimpleIntegratorNode) Wait() {
 	n.waitGroup.Wait()
 }
 
-func (n *SimpleIntegratorNode) processSignal(signal node.Signal) {
+func (n *SimpleIntegratorNode) processSignal(sig node.Signal) {
 	var results []string
+
+	sig = n.PreProcessSignal(sig)
 
 	// Collect results from child nodes
 	for _, child := range n.childNodes {
@@ -61,7 +63,7 @@ func (n *SimpleIntegratorNode) processSignal(signal node.Signal) {
 		go func(child node.Node) {
 			defer n.waitGroup.Done()
 
-			childSignal := signal // Clone the signal for the child node
+			childSignal := sig // Clone the signal for the child node
 			child.InputCh() <- childSignal
 
 			select {
@@ -80,6 +82,7 @@ func (n *SimpleIntegratorNode) processSignal(signal node.Signal) {
 	if err != nil {
 		n.LogErr(err)
 	}
-	signal.Response = NewStringData(finalResult)
-	n.UpdateState(signal)
+	sig.Response = NewStringData(finalResult)
+
+	n.PostProcesSignal(sig)
 }

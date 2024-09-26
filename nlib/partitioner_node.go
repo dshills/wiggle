@@ -16,22 +16,24 @@ type SimplePartitionerNode struct {
 	waitGroup     *sync.WaitGroup
 }
 
-func NewSimplePartitionerNode(partitionFunc node.PartitionerFn, l node.Logger, sm node.StateManager) *SimplePartitionerNode {
+func NewSimplePartitionerNode(partitionFunc node.PartitionerFn, l node.Logger, sm node.StateManager, name string) *SimplePartitionerNode {
 	n := SimplePartitionerNode{
 		partitionFunc: partitionFunc,
 		waitGroup:     &sync.WaitGroup{},
 	}
 	n.SetLogger(l)
 	n.SetStateManager(sm)
-	n.SetID(generateUUID())
+	n.SetID(name)
 	n.MakeInputCh()
 
 	go func() {
-		select {
-		case sig := <-n.inCh:
-			n.processSignal(sig)
-		case <-n.doneCh:
-			return
+		for {
+			select {
+			case sig := <-n.inCh:
+				n.processSignal(sig)
+			case <-n.doneCh:
+				return
+			}
 		}
 	}()
 
@@ -46,9 +48,11 @@ func (n *SimplePartitionerNode) SetChildNodes(nodes ...node.Node) {
 	n.childNodes = nodes
 }
 
-func (n *SimplePartitionerNode) processSignal(signal node.Signal) {
+func (n *SimplePartitionerNode) processSignal(sig node.Signal) {
+	sig = n.PreProcessSignal(sig)
+
 	// Partition the signal's data
-	parts, err := n.partitionFunc(signal.Data.String())
+	parts, err := n.partitionFunc(sig.Data.String())
 	if err != nil {
 		n.LogErr(err)
 		return
@@ -60,12 +64,13 @@ func (n *SimplePartitionerNode) processSignal(signal node.Signal) {
 			n.waitGroup.Add(1)
 			go func(child node.Node, part string) {
 				defer n.waitGroup.Done()
-				newSignal := signal // Clone signal to avoid mutation issues
+				newSignal := sig // Clone signal to avoid mutation issues
 				newSignal.Data = NewStringData(part)
 				child.InputCh() <- newSignal
 			}(child, part)
 		}
 	}
 	n.waitGroup.Wait()
-	n.UpdateState(signal)
+
+	n.PostProcesSignal(sig)
 }
