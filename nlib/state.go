@@ -81,8 +81,8 @@ func (s *SimpleStateManager) Complete() {
 	}
 }
 
-func (s *SimpleStateManager) WaitFor(nodeid string) {
-	s.nodeWaitID = nodeid
+func (s *SimpleStateManager) WaitFor(n node.Node) {
+	s.nodeWaitID = n.ID()
 	done := s.Register()
 	<-done
 }

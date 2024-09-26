@@ -90,28 +90,24 @@ func main() {
 	// Create State Manager
 	stateMgr := nlib.NewSimpleStateManager()
 
-	// Create Context Manager
-	contextMgr := nlib.NewSimpleContextManager()
+	// Define output writer
+	writer := os.Stdout
 
-	// Create History Manager
-	historyMgr := nlib.NewSimpleHistoryManager()
-
-	// Create Nodes
+	// Create an AI Node
 	firstNode := nlib.NewAINode(lm, logger, stateMgr)
 	firstNode.SetID("AI Node")
-	outNode := nlib.NewOutputStringNode(os.Stdout, logger, stateMgr)
+    // Create an Output Node
+	outNode := nlib.NewOutputStringNode(writer, logger, stateMgr)
 	outNode.SetID("Output Node")
+
+    // Connect them
 	firstNode.Connect(outNode)
 
-	// Create the initial Signal with our task
-	task := nlib.NewStringData("Why is the sky blue?")
-	initialSig := node.NewSignal(firstNode.ID(), contextMgr, historyMgr, task)
-
-	// Send it
-	firstNode.InputCh() <- initialSig
+	// Send initial Signal
+	firstNode.InputCh() <- nlib.NewDefaultSignal(firstNode, "Why is the sky blue?")
 
 	// Wait for the output node to print the result
-	stateMgr.WaitFor(outNode.ID())
+	stateMgr.WaitFor(outNode)
 }
 ```
 
@@ -121,7 +117,7 @@ In this example:
 - Created an AI Node and Output Node
 - Connected the nodes
 - Sent the task to the first node
-- Waited for the last node (output) to complete
+- Wait for the last node (output) to complete
 
 ## Core Concepts
 

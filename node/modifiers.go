@@ -66,7 +66,7 @@ type StateManager interface {
 	Register() chan struct{}
 	ShouldFail(error) bool
 	UpdateState(Signal)
-	WaitFor(nodeID string)
+	WaitFor(Node)
 }
 
 // Guidance provides a mechanism to generate structured guidance or instructions

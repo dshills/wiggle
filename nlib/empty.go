@@ -21,8 +21,8 @@ type EmptyNode struct {
 	doneCh      chan struct{}
 }
 
-func (n *EmptyNode) Connect(nn node.Node) {
-	n.nodes = append(n.nodes, nn)
+func (n *EmptyNode) Connect(nn ...node.Node) {
+	n.nodes = append(n.nodes, nn...)
 }
 
 func (n *EmptyNode) ID() string {

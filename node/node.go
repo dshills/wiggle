@@ -6,7 +6,7 @@ package node
 // enabling different types of nodes (e.g., action nodes, query nodes, partitioners, integrators)
 // to be chained together, ensuring flexible and scalable workflows.
 type Node interface {
-	Connect(Node)
+	Connect(...Node)
 	ID() string
 	InputCh() chan Signal
 	SetGuidance(Guidance)
