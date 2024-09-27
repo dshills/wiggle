@@ -84,6 +84,12 @@ type OutputNode interface {
 	SetWriter(io.Writer)
 }
 
+// InputNode reades data from the reader
+type InputNode interface {
+	Node
+	SetReader(io.Reader)
+}
+
 // SetNode represents a collection of interconnected nodes forming a processing pipeline.
 // It defines the starting node and provides mechanisms for setting the name and
 // managing the execution flow of the node chain. The Set interface allows for
