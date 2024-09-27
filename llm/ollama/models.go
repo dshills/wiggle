@@ -9,11 +9,12 @@ import (
 )
 
 func (o *Ollama) AvailableModels() ([]llm.Model, error) {
-	modelEP := "/api/tags"
+	const modelEP = "/api/tags"
 	ep, err := url.JoinPath(o.baseURL, modelEP)
 	if err != nil {
 		return nil, err
 	}
+	// nolint
 	httpResp, err := http.Get(ep)
 	if err != nil {
 		return nil, err

@@ -9,7 +9,7 @@ import (
 	"net/url"
 )
 
-func (ai *OpenAI) GenEmbed(ctx context.Context, txt string) ([]float32, error) {
+func (ai *OpenAI) GenEmbed(_ context.Context, txt string) ([]float32, error) {
 	const embedEP = "/v1/embeddings"
 	ep, err := url.JoinPath(ai.baseURL, embedEP)
 	if err != nil {

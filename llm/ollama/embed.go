@@ -9,7 +9,7 @@ import (
 	"net/url"
 )
 
-func (o *Ollama) GenEmbed(ctx context.Context, txt string) ([]float32, error) {
+func (o *Ollama) GenEmbed(_ context.Context, txt string) ([]float32, error) {
 	const embedEP = "/api/embed"
 	ep, err := url.JoinPath(o.baseURL, embedEP)
 	if err != nil {

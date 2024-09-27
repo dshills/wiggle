@@ -25,6 +25,7 @@ func (ai *OpenAI) AvailableModels() ([]llm.Model, error) {
 	if err != nil {
 		return nil, err
 	}
+	// nolint
 	httpResp, err := http.Get(ep)
 	if err != nil {
 		return nil, err
