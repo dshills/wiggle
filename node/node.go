@@ -63,6 +63,7 @@ type ConditionFn func(Signal) bool
 // or it can rerun until a specific answer is met or simply a set number of times
 // The "for" loop in a set of nodes
 type LoopNode interface {
+	Node
 	SetStartNode(Node)
 	SetConditionFunc(ConditionFn)
 }
@@ -73,19 +74,21 @@ type LoopNode interface {
 // If no conditions are met it will call the next Node
 // The "if-elseif-else" in a set of nodes
 type BranchNode interface {
+	Node
 	AddConditional(Node, ConditionFn)
 }
 
 // OutputNode writes data to a writer
 type OutputNode interface {
+	Node
 	SetWriter(io.Writer)
 }
 
-// Set represents a collection of interconnected nodes forming a processing pipeline.
+// SetNode represents a collection of interconnected nodes forming a processing pipeline.
 // It defines the starting node and provides mechanisms for setting the name and
 // managing the execution flow of the node chain. The Set interface allows for
 // orchestrating complex workflows by organizing nodes into coherent processing units.
-type Set interface {
+type SetNode interface {
 	Node
 	SetStartNode(Node)
 	SetCoordinator(Coordinator)
