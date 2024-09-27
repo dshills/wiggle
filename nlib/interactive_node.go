@@ -9,16 +9,16 @@ import (
 	"github.com/dshills/wiggle/node"
 )
 
+// Compile-time check to ensure InteractiveNode implements the node.Node interface
+var _ node.Node = (*InteractiveNode)(nil)
+
 type InteractiveNode struct {
 	EmptyNode
 }
 
 func NewInteractiveNode(l node.Logger, sm node.StateManager, name string) *InteractiveNode {
 	n := InteractiveNode{}
-	n.SetLogger(l)
-	n.SetStateManager(sm)
-	n.SetID(name)
-	n.MakeInputCh()
+	n.Init(l, sm, name)
 	go n.listen()
 	return &n
 }
@@ -44,7 +44,8 @@ func (n *InteractiveNode) listen() {
 
 			sig.Response = NewStringData(query)
 
-			n.PostProcesSignal(sig)
+			sig = n.PostProcesSignal(sig)
+			n.SendToConnected(sig)
 
 		case <-n.doneCh: // If the done channel is closed, exit the function
 			return

@@ -20,11 +20,8 @@ type AINode struct {
 // NewAINode creates a new AINode, initializing the LLM, logger, and state manager,
 // and sets up the node to listen for incoming signals asynchronously.
 func NewAINode(lm llm.LLM, l node.Logger, sm node.StateManager, name string) node.Node {
-	ai := AINode{lm: lm}   // Initialize the AINode with the provided LLM
-	ai.SetID(name)         // Set the node's ID
-	ai.SetStateManager(sm) // Set the state manager for tracking signal state
-	ai.SetLogger(l)        // Set the logger for logging actions
-	ai.MakeInputCh()       // Create the input channel for receiving signals
+	ai := AINode{lm: lm} // Initialize the AINode with the provided LLM
+	ai.Init(l, sm, name)
 
 	go ai.listen() // Start the node's listener in a separate goroutine
 
@@ -38,7 +35,7 @@ func (n *AINode) listen() {
 	for {
 		select {
 		case sig := <-n.inCh: // Wait for an incoming signal
-			n.PreProcessSignal(sig)
+			sig = n.PreProcessSignal(sig)
 
 			// Generate guidance (possibly modify the signal) before sending it to the LLM
 			sig, err = n.GenGuidance(sig)
@@ -55,7 +52,8 @@ func (n *AINode) listen() {
 				n.LogErr(err) // Log any errors returned by the LLM
 			}
 
-			n.PostProcesSignal(sig)
+			sig = n.PostProcesSignal(sig)
+			n.SendToConnected(sig)
 
 		case <-n.doneCh: // If the done channel is closed, exit the function
 			return

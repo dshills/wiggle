@@ -1,5 +1,7 @@
 package node
 
+import "io"
+
 // Node represents a generic processing unit in a chain of tasks.
 // It processes incoming signals, executes actions (e.g., transforming data, querying a model),
 // and forwards the processed signal to connected nodes. The interface allows for modular design,
@@ -48,6 +50,35 @@ type IntegratorNode interface {
 	Node
 	SetIntegratorFunc(integratorFunc IntegratorFn)
 	SetChildNodes(nodes ...Node)
+}
+
+// ConditionFn is a function type that takes a Signal and returns
+// true or false depending on if the Signal meets some criteria
+// true = It met the condition, false = Did not meet the condition
+type ConditionFn func(Signal) bool
+
+// LoopNode will send it's Signal to the start Node until
+// the ConditionFn returns true then it will call the next node
+// Used in conjunction with Hook function it can accumulate multiple runs
+// or it can rerun until a specific answer is met or simply a set number of times
+// The "for" loop in a set of nodes
+type LoopNode interface {
+	SetStartNode(Node)
+	SetConditionFunc(ConditionFn)
+}
+
+// BracnhNode will evaluate the Signal using the added ConditionFn
+// They wil be evaluated in order of being added
+// If a condition is met it will call the Node associated with the condition
+// If no conditions are met it will call the next Node
+// The "if-elseif-else" in a set of nodes
+type BranchNode interface {
+	AddConditional(Node, ConditionFn)
+}
+
+// OutputNode writes data to a writer
+type OutputNode interface {
+	SetWriter(io.Writer)
 }
 
 // Set represents a collection of interconnected nodes forming a processing pipeline.

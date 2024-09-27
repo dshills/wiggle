@@ -7,7 +7,7 @@ import (
 )
 
 // Compile-time check
-var _ node.Node = (*SimplePartitionerNode)(nil)
+var _ node.PartitionerNode = (*SimplePartitionerNode)(nil)
 
 type SimplePartitionerNode struct {
 	EmptyNode
@@ -21,10 +21,7 @@ func NewSimplePartitionerNode(partitionFunc node.PartitionerFn, l node.Logger, s
 		partitionFunc: partitionFunc,
 		waitGroup:     &sync.WaitGroup{},
 	}
-	n.SetLogger(l)
-	n.SetStateManager(sm)
-	n.SetID(name)
-	n.MakeInputCh()
+	n.Init(l, sm, name)
 
 	go func() {
 		for {
@@ -72,5 +69,6 @@ func (n *SimplePartitionerNode) processSignal(sig node.Signal) {
 	}
 	n.waitGroup.Wait()
 
-	n.PostProcesSignal(sig)
+	sig = n.PostProcesSignal(sig)
+	n.SendToConnected(sig)
 }

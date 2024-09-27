@@ -23,6 +23,13 @@ type EmptyNode struct {
 	doneCh      chan struct{}
 }
 
+func (n *EmptyNode) Init(l node.Logger, mgr node.StateManager, id string) {
+	n.SetLogger(l)
+	n.SetStateManager(mgr)
+	n.SetID(id)
+	n.MakeInputCh()
+}
+
 func (n *EmptyNode) Connect(nn ...node.Node) {
 	n.nodes = append(n.nodes, nn...)
 }
@@ -150,7 +157,7 @@ func (n *EmptyNode) PreProcessSignal(sig node.Signal) node.Signal {
 	return sig
 }
 
-func (n *EmptyNode) PostProcesSignal(sig node.Signal) {
+func (n *EmptyNode) PostProcesSignal(sig node.Signal) node.Signal {
 	// Run any registered after-action hooks
 	sig, err := n.RunAfterHook(sig)
 	if err != nil {
@@ -160,6 +167,5 @@ func (n *EmptyNode) PostProcesSignal(sig node.Signal) {
 	// Update the state of the signal after processing
 	n.UpdateState(sig)
 
-	// Send the processed signal to connected nodes
-	n.SendToConnected(sig)
+	return sig
 }

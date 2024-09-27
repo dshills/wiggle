@@ -8,7 +8,7 @@ import (
 )
 
 // Compile-time check
-var _ node.Node = (*SimpleIntegratorNode)(nil)
+var _ node.IntegratorNode = (*SimpleIntegratorNode)(nil)
 
 type SimpleIntegratorNode struct {
 	EmptyNode
@@ -18,15 +18,13 @@ type SimpleIntegratorNode struct {
 	waitGroup      *sync.WaitGroup
 }
 
-func NewSimpleIntegratorNode(integratorFunc node.IntegratorFn, l node.Logger, sm node.StateManager) *SimpleIntegratorNode {
+func NewSimpleIntegratorNode(integratorFunc node.IntegratorFn, l node.Logger, sm node.StateManager, name string) *SimpleIntegratorNode {
 	n := SimpleIntegratorNode{
 		integratorFunc: integratorFunc,
 		resultCh:       make(chan string, 10), // Buffered to store results from child nodes
 		waitGroup:      &sync.WaitGroup{},
 	}
-	n.SetLogger(l)
-	n.SetStateManager(sm)
-	n.MakeInputCh()
+	n.Init(l, sm, name)
 
 	go func() {
 		select {
@@ -84,5 +82,6 @@ func (n *SimpleIntegratorNode) processSignal(sig node.Signal) {
 	}
 	sig.Response = NewStringData(finalResult)
 
-	n.PostProcesSignal(sig)
+	sig = n.PostProcesSignal(sig)
+	n.SendToConnected(sig)
 }
