@@ -45,6 +45,7 @@ func (n *AINode) listen() {
 			if err != nil {
 				n.LogErr(err) // Log any errors during guidance generation
 			}
+			fmt.Printf("%+v\n", sig)
 
 			n.LogInfo(fmt.Sprintf("Sending to llm: %v", sig.Data.String())) // Log the data being sent to the LLM
 

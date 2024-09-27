@@ -1,5 +1,9 @@
 package node
 
+import (
+	"fmt"
+)
+
 // Signal represents the core data structure passed between nodes in a processing chain.
 // It contains the data being processed, contextual information, metadata, response data,
 // and a history of transformations. Signals enable the flow of information across nodes,
@@ -12,14 +16,34 @@ type Signal struct {
 	Context  ContextManager
 	Meta     []Meta
 	History  HistoryManager
-	Err      error
+	Err      string
 	Status   string
+}
+
+func (s *Signal) AsLog() string {
+	return fmt.Sprintf("{ NodeID: %s, data: %v, Response: %v, Err: %s, Status: %s }", s.NodeID, s.Data, s.Response, s.Err, s.Status)
 }
 
 func (s *Signal) SetContext(forID string, data DataCarrier) {
 	if s.Context != nil {
 		s.Context.SetContext(forID, data)
 	}
+}
+
+// Before sending to the next node the response from the current
+// Node is set as the data for the next Node
+// It will save the history of the current node in the HistoryManager
+func (s *Signal) PrepareForNext() {
+	if s.History != nil {
+		s.History.AddHistory(*s)
+	}
+	s.Data = s.Response
+	s.Response = nil
+}
+
+// When sending to the next Node we set the NodeID of the target Node
+func (s *Signal) ChangeTarget(targetID string) {
+	s.NodeID = targetID
 }
 
 // Meta represents key-value pairs of metadata associated with a signal.
@@ -36,24 +60,10 @@ type Meta struct {
 // initial Signal at the start of processing
 func NewSignal(id string, cm ContextManager, hx HistoryManager, task DataCarrier, meta ...Meta) Signal {
 	return Signal{
-		NodeID:   id,
-		Context:  cm,
-		History:  hx,
-		Meta:     meta,
-		Response: task, // Nodes read tasks from the previous response
+		NodeID:  id,
+		Context: cm,
+		History: hx,
+		Meta:    meta,
+		Data:    task,
 	}
-}
-
-// SignalFromSignal will save the original Signal in history
-// Convert the response to the incomming data and update the
-// NodeID. This is commonly used when a Node receives a signal
-// from the previous Node
-func SignalFromSignal(id string, sig Signal) Signal {
-	if sig.History != nil {
-		sig.History.AddHistory(sig)
-	}
-	sig.Data = sig.Response
-	sig.NodeID = id
-	sig.Response = nil
-	return sig
 }

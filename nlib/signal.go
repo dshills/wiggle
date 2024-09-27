@@ -2,7 +2,7 @@ package nlib
 
 import "github.com/dshills/wiggle/node"
 
-func NewDefaultSignal(firstNode node.Node, task string) node.Signal {
+func NewDefaultSignal(targetNode node.Node, task string) node.Signal {
 	// Create Context Manager
 	contextMgr := NewSimpleContextManager()
 
@@ -11,5 +11,5 @@ func NewDefaultSignal(firstNode node.Node, task string) node.Signal {
 
 	data := NewStringData(task)
 
-	return node.NewSignal(firstNode.ID(), contextMgr, historyMgr, data)
+	return node.NewSignal(targetNode.ID(), contextMgr, historyMgr, data)
 }

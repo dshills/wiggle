@@ -30,6 +30,8 @@ func (n *InteractiveNode) listen() {
 		case sig := <-n.inCh: // Wait for an incoming signal
 			n.LogInfo("Received signal") // Log the receipt of a signal
 
+			sig = n.PreProcessSignal(sig)
+
 			reader := bufio.NewReader(os.Stdin)
 			fmt.Print("\nEnter your question (type /quit to stop): ")
 			query, _ := reader.ReadString('\n')
@@ -40,14 +42,10 @@ func (n *InteractiveNode) listen() {
 				n.stateMgr.Complete()
 			}
 
-			sig.NodeID = n.ID()
 			sig.Response = NewStringData(query)
 
-			// Update the state of the signal after processing
-			n.UpdateState(sig)
+			n.PostProcesSignal(sig)
 
-			// Send the processed signal to connected nodes
-			n.SendToConnected(sig)
 		case <-n.doneCh: // If the done channel is closed, exit the function
 			return
 		}

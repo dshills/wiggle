@@ -37,8 +37,8 @@ func (s *SimpleStateManager) UpdateState(sig node.Signal) {
 	if !ok {
 		st = node.State{} // Initialize if no state exists for the NodeID
 	}
-	st.Completed++      // Increment the completion counter
-	if sig.Err != nil { // Increment the failure counter if there's an error
+	st.Completed++     // Increment the completion counter
+	if sig.Err != "" { // Increment the failure counter if there's an error
 		st.Failures++
 	}
 	st.Status = sig.Status      // Update the status of the signal

@@ -28,8 +28,10 @@ func (n *EmptyNode) Connect(nn ...node.Node) {
 }
 
 func (n *EmptyNode) SendToConnected(sig node.Signal) {
+	sig.PrepareForNext()
 	for _, conNode := range n.nodes {
 		n.LogInfo(fmt.Sprintf("Sending to %s", conNode.ID()))
+		sig.ChangeTarget(conNode.ID())
 		conNode.InputCh() <- sig // Send the signal to each node's input channel
 	}
 }
@@ -139,9 +141,6 @@ func (n *EmptyNode) PreProcessSignal(sig node.Signal) node.Signal {
 	if n.RateLimit(sig) != nil {
 		time.Sleep(1 * time.Second) // If rate-limited, pause for 1 second
 	}
-
-	// Create a new signal based on the current one, but with updated node ID
-	sig = node.SignalFromSignal(n.ID(), sig)
 
 	// Run any registered before-action hooks
 	sig, err := n.RunBeforeHook(sig)

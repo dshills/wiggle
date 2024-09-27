@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -33,9 +34,15 @@ func main() {
 	firstNode.Connect(outNode)
 	outNode.Connect(inputNode)
 
+	signal := nlib.NewDefaultSignal(inputNode, "")
 	// Send it
-	inputNode.InputCh() <- nlib.NewDefaultSignal(inputNode, "")
+	inputNode.InputCh() <- signal
 
 	// Wait forever
 	stateMgr.WaitFor(nil)
+
+	// Print the history
+	for _, hx := range signal.History.GetHistory() {
+		fmt.Println(hx.AsLog())
+	}
 }
