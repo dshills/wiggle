@@ -26,11 +26,11 @@ func NewOutputStringNode(w io.Writer, l node.Logger, sm node.StateManager, name 
 	go func() {
 		for {
 			select {
-			case sig := <-n.inCh: // Receive a signal from the input channel.
+			case sig := <-n.InputCh(): // Receive a signal from the input channel.
 				sig = n.PreProcessSignal(sig) // Run pre-processing hooks.
 
 				// Write the signal's data (response) to the provided writer.
-				_, err := n.writer.Write([]byte(sig.Data.String()))
+				_, err := n.writer.Write([]byte(sig.Task.String()))
 				if err != nil {
 					n.LogErr(err) // Log any errors encountered during writing.
 				}
@@ -38,7 +38,7 @@ func NewOutputStringNode(w io.Writer, l node.Logger, sm node.StateManager, name 
 				sig = n.PostProcesSignal(sig) // Run post-processing hooks.
 				n.SendToConnected(sig)        // Send the signal to the connected nodes.
 
-			case <-n.doneCh: // If the done channel is closed, exit the loop.
+			case <-n.DoneCh(): // If the done channel is closed, exit the loop.
 				return
 			}
 		}

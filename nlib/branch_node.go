@@ -36,7 +36,7 @@ func NewSimpleBranchNode(l node.Logger, sm node.StateManager, name string) *Simp
 			select {
 			case sig := <-n.inCh: // Receive a signal from the input channel.
 				n.processSignal(sig) // Process the signal.
-			case <-n.doneCh: // If the done channel is closed, exit the loop.
+			case <-n.DoneCh(): // If the done channel is closed, exit the loop.
 				return
 			}
 		}
@@ -58,10 +58,10 @@ func (n *SimpleBranchNode) processSignal(sig node.Signal) {
 	for _, cond := range n.conditions {
 		// If the condition function evaluates to true, send the signal to the target node.
 		if cond.condFn(sig) {
-			sig.PrepareForNext()                                      // Prepare the signal for the next stage.
+			sig = PrepareSignalForNext(sig)
 			n.LogInfo(fmt.Sprintf("Sending to %s", cond.target.ID())) // Log the routing action.
-			sig.ChangeTarget(cond.target.ID())                        // Change the target node of the signal.
-			cond.target.InputCh() <- sig                              // Send the signal to the target node.
+			sig.NodeID = cond.target.ID()
+			cond.target.InputCh() <- sig // Send the signal to the target node.
 			return
 		}
 	}

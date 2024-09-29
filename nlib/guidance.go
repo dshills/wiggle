@@ -27,12 +27,12 @@ func NewSimpleGuidance() *SimpleGuidance {
 func (g *SimpleGuidance) Generate(sig node.Signal) (node.Signal, error) {
 	con, err := sig.Context.GetContext(sig.NodeID)
 	if err != nil {
-		prompt := g.prompt(sig.Data.String(), "")
-		sig.Data = NewStringData(prompt)
+		prompt := g.prompt(sig.Task.String(), "")
+		sig.Task = NewStringData(prompt)
 		return sig, nil
 	}
-	prompt := g.prompt(sig.Data.String(), con.String())
-	sig.Data = NewStringData(prompt)
+	prompt := g.prompt(sig.Task.String(), con.String())
+	sig.Task = NewStringData(prompt)
 	return sig, nil
 }
 

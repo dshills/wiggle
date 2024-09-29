@@ -23,7 +23,7 @@ func NewSimpleStringReaderNode(r io.Reader, l node.Logger, sm node.StateManager,
 			select {
 			case sig := <-n.InputCh():
 				n.processSignal(sig)
-			case <-n.doneCh:
+			case <-n.DoneCh():
 				return
 			}
 		}
@@ -40,7 +40,7 @@ func (n *SimpleStringReaderNode) processSignal(sig node.Signal) {
 		n.LogErr(err)
 		return
 	}
-	sig.Response = NewStringData(string(byts))
+	sig.Result = NewStringData(string(byts))
 
 	sig = n.PostProcesSignal(sig)
 	n.SendToConnected(sig)

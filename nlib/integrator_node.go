@@ -2,7 +2,6 @@ package nlib
 
 import (
 	"sync"
-	"time"
 
 	"github.com/dshills/wiggle/node"
 )
@@ -13,16 +12,14 @@ var _ node.IntegratorNode = (*SimpleIntegratorNode)(nil)
 type SimpleIntegratorNode struct {
 	EmptyNode
 	integratorFunc node.IntegratorFn
-	childNodes     []node.Node
-	resultCh       chan string
-	waitGroup      *sync.WaitGroup
+	groups         []node.Group
+	grpSignals     map[string][]node.Signal
+	sigM           sync.RWMutex
 }
 
 func NewSimpleIntegratorNode(integratorFunc node.IntegratorFn, l node.Logger, sm node.StateManager, name string) *SimpleIntegratorNode {
 	n := SimpleIntegratorNode{
 		integratorFunc: integratorFunc,
-		resultCh:       make(chan string, 10), // Buffered to store results from child nodes
-		waitGroup:      &sync.WaitGroup{},
 	}
 	n.Init(l, sm, name)
 
@@ -30,7 +27,7 @@ func NewSimpleIntegratorNode(integratorFunc node.IntegratorFn, l node.Logger, sm
 		select {
 		case sig := <-n.inCh:
 			n.processSignal(sig)
-		case <-n.doneCh:
+		case <-n.DoneCh():
 			return
 		}
 	}()
@@ -38,50 +35,97 @@ func NewSimpleIntegratorNode(integratorFunc node.IntegratorFn, l node.Logger, sm
 	return &n
 }
 
+func (n *SimpleIntegratorNode) AddGroup(group node.Group) {
+	n.groups = append(n.groups, group)
+}
+
 func (n *SimpleIntegratorNode) SetIntegratorFunc(integratorFunc node.IntegratorFn) {
 	n.integratorFunc = integratorFunc
 }
 
-func (n *SimpleIntegratorNode) SetChildNodes(nodes ...node.Node) {
-	n.childNodes = nodes
-}
-
-func (n *SimpleIntegratorNode) Wait() {
-	n.waitGroup.Wait()
-}
-
 func (n *SimpleIntegratorNode) processSignal(sig node.Signal) {
-	var results []string
-
+	if n.integratorFunc == nil {
+		n.LogError("missing required integratorFunc, failing")
+		n.StateManager().Complete()
+		return
+	}
 	sig = n.PreProcessSignal(sig)
 
-	// Collect results from child nodes
-	for _, child := range n.childNodes {
-		n.waitGroup.Add(1)
-		go func(child node.Node) {
-			defer n.waitGroup.Done()
-
-			childSignal := sig // Clone the signal for the child node
-			child.InputCh() <- childSignal
-
-			select {
-			case result := <-n.resultCh:
-				results = append(results, result)
-			case <-time.After(5 * time.Second): // Timeout per node's response
-			}
-		}(child)
+	grp := n.inGroup(sig)
+	if grp != nil {
+		n.addSignalToGroup(sig, grp.BatchID)
+		n.processGroup(sig, grp.BatchID)
+		return
 	}
-
-	// Wait for all child nodes to finish
-	n.waitGroup.Wait()
-
-	// Combine the results using the integrator function
-	finalResult, err := n.integratorFunc(results)
-	if err != nil {
-		n.LogErr(err)
-	}
-	sig.Response = NewStringData(finalResult)
 
 	sig = n.PostProcesSignal(sig)
 	n.SendToConnected(sig)
+}
+
+func (n *SimpleIntegratorNode) inGroup(sig node.Signal) *node.Group {
+	for i := range n.groups {
+		if len(FilterMetaKey(sig, n.groups[i].BatchID)) > 0 {
+			return &n.groups[i]
+		}
+	}
+	return nil
+}
+
+func (n *SimpleIntegratorNode) addSignalToGroup(sig node.Signal, batchID string) {
+	n.sigM.Lock()
+	defer n.sigM.Unlock()
+	grp, ok := n.grpSignals[batchID]
+	if !ok {
+		grp = []node.Signal{}
+	}
+	grp = append(grp, sig)
+	n.grpSignals[batchID] = grp
+}
+
+func (n *SimpleIntegratorNode) processGroup(sig node.Signal, batchID string) {
+	if !n.isGroupComplete(batchID) {
+		return // Don't have all the pieces yet
+	}
+	n.sigM.RLock()
+	defer n.sigM.RUnlock()
+
+	results := []string{}
+	for _, gsig := range n.grpSignals[batchID] {
+		results = append(results, gsig.Result.String())
+		if sig.History != nil {
+			sig.History.AddHistory(gsig)
+		}
+	}
+	final, err := n.integratorFunc(results)
+	if err != nil {
+		n.LogErr(err)
+		n.StateManager().Complete()
+		return
+	}
+	sig.Result = NewStringData(final)
+	sig = n.PostProcesSignal(sig)
+	n.SendToConnected(sig)
+}
+
+func (n *SimpleIntegratorNode) isGroupComplete(batchID string) bool {
+	groupDef := node.Group{}
+	found := false
+	for _, def := range n.groups {
+		if def.BatchID == batchID {
+			groupDef = def
+			found = true
+			break
+		}
+	}
+	if !found {
+		return false
+	}
+	n.sigM.RLock()
+	defer n.sigM.RUnlock()
+
+	grp := n.grpSignals[batchID]
+	if len(grp) == len(groupDef.TaskIDs) {
+		return true
+	}
+	return true
 }

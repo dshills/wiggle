@@ -23,48 +23,48 @@ func NewAINode(lm llm.LLM, l node.Logger, sm node.StateManager, name string) nod
 	ai := AINode{lm: lm} // Initialize the AINode with the provided LLM
 	ai.Init(l, sm, name)
 
-	go ai.listen() // Start the node's listener in a separate goroutine
+	go func() {
+		for {
+			select {
+			case sig := <-ai.InputCh():
+				ai.processSignal(sig)
+			case <-ai.DoneCh():
+			}
+		}
+	}()
 
 	return &ai
 }
 
 // listen listens for incoming signals on the input channel and processes them.
-func (n *AINode) listen() {
+func (n *AINode) processSignal(sig node.Signal) {
 	var err error
 	var ctx = context.TODO() // Initialize a context for managing requests
-	for {
-		select {
-		case sig := <-n.inCh: // Wait for an incoming signal
-			sig = n.PreProcessSignal(sig)
+	sig = n.PreProcessSignal(sig)
 
-			// Generate guidance (possibly modify the signal) before sending it to the LLM
-			sig, err = n.GenGuidance(sig)
-			if err != nil {
-				n.LogErr(err) // Log any errors during guidance generation
-			}
-			fmt.Printf("%+v\n", sig)
-
-			n.LogInfo(fmt.Sprintf("Sending to llm: %v", sig.Data.String())) // Log the data being sent to the LLM
-
-			// Call the LLM to process the signal
-			sig, err = n.CallLLM(ctx, sig)
-			if err != nil {
-				n.LogErr(err) // Log any errors returned by the LLM
-			}
-
-			sig = n.PostProcesSignal(sig)
-			n.SendToConnected(sig)
-
-		case <-n.doneCh: // If the done channel is closed, exit the function
-			return
-		}
+	// Generate guidance (possibly modify the signal) before sending it to the LLM
+	sig, err = n.GenGuidance(sig)
+	if err != nil {
+		n.LogErr(err) // Log any errors during guidance generation
 	}
+	fmt.Printf("%+v\n", sig)
+
+	n.LogInfo(fmt.Sprintf("Sending to llm: %v", sig.Task.String())) // Log the data being sent to the LLM
+
+	// Call the LLM to process the signal
+	sig, err = n.CallLLM(ctx, sig)
+	if err != nil {
+		n.LogErr(err) // Log any errors returned by the LLM
+	}
+
+	sig = n.PostProcesSignal(sig)
+	n.SendToConnected(sig)
 }
 
 // callLLM sends the signal's data to the LLM for processing and returns the modified signal.
 func (n *AINode) CallLLM(ctx context.Context, sig node.Signal) (node.Signal, error) {
 	// Create a list of messages for the LLM, using the signal's data as the user message
-	msgList := llm.MessageList{llm.UserMsg(sig.Data.String())}
+	msgList := llm.MessageList{llm.UserMsg(sig.Task.String())}
 
 	// Call the LLM with the message list
 	msg, err := n.lm.Chat(ctx, msgList)
@@ -73,7 +73,7 @@ func (n *AINode) CallLLM(ctx context.Context, sig node.Signal) (node.Signal, err
 	}
 
 	// Set the response data in the signal
-	sig.Response = NewStringData(msg.Content)
+	sig.Result = NewStringData(msg.Content)
 
 	return sig, nil // Return the modified signal
 }

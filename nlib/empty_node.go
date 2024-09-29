@@ -35,10 +35,10 @@ func (n *EmptyNode) Connect(nn ...node.Node) {
 }
 
 func (n *EmptyNode) SendToConnected(sig node.Signal) {
-	sig.PrepareForNext()
+	sig = PrepareSignalForNext(sig)
 	for _, conNode := range n.nodes {
 		n.LogInfo(fmt.Sprintf("Sending to %s", conNode.ID()))
-		sig.ChangeTarget(conNode.ID())
+		sig.NodeID = conNode.ID()
 		conNode.InputCh() <- sig // Send the signal to each node's input channel
 	}
 }
@@ -77,6 +77,10 @@ func (n *EmptyNode) SetHooks(hooks node.Hooks) {
 	n.hooks = hooks
 }
 
+func (n *EmptyNode) Hooks() node.Hooks {
+	return n.hooks
+}
+
 func (n *EmptyNode) RunBeforeHook(sig node.Signal) (node.Signal, error) {
 	if n.hooks != nil {
 		return n.hooks.BeforeAction(sig)
@@ -97,6 +101,10 @@ func (n *EmptyNode) SetID(id string) {
 
 func (n *EmptyNode) SetLogger(logger node.Logger) {
 	n.logger = logger
+}
+
+func (n *EmptyNode) Logger() node.Logger {
+	return n.logger
 }
 
 func (n *EmptyNode) LogErr(err error) {
@@ -125,6 +133,10 @@ func (n *EmptyNode) SetResourceManager(mgr node.ResourceManager) {
 	n.resourceMgr = mgr
 }
 
+func (n *EmptyNode) ResourceManager() node.ResourceManager {
+	return n.resourceMgr
+}
+
 func (n *EmptyNode) RateLimit(sig node.Signal) error {
 	if n.resourceMgr != nil {
 		return n.resourceMgr.RateLimit(sig)
@@ -134,6 +146,15 @@ func (n *EmptyNode) RateLimit(sig node.Signal) error {
 
 func (n *EmptyNode) SetStateManager(mgr node.StateManager) {
 	n.stateMgr = mgr
+	n.doneCh = n.stateMgr.Register()
+}
+
+func (n *EmptyNode) DoneCh() chan struct{} {
+	return n.doneCh
+}
+
+func (n *EmptyNode) StateManager() node.StateManager {
+	return n.stateMgr
 }
 
 func (n *EmptyNode) UpdateState(sig node.Signal) {

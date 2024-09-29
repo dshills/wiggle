@@ -55,7 +55,7 @@ func (n *InteractiveNode) listen() {
 			}
 
 			// Set the user's input as the signal's response data.
-			sig.Response = NewStringData(query)
+			sig.Result = NewStringData(query)
 
 			// Run post-processing hooks and forward the signal to connected nodes.
 			sig = n.PostProcesSignal(sig)

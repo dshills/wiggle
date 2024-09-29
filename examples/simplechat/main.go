@@ -43,6 +43,6 @@ func main() {
 
 	// Print the history
 	for _, hx := range signal.History.GetHistory() {
-		fmt.Println(hx.AsLog())
+		fmt.Println(nlib.SignalToLog(hx))
 	}
 }

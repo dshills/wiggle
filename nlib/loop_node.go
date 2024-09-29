@@ -32,9 +32,9 @@ func NewSimpleLoopNode(start node.Node, condFn node.ConditionFn, l node.Logger, 
 	go func() {
 		for {
 			select {
-			case sig := <-n.inCh: // Process signal when received.
+			case sig := <-n.InputCh(): // Process signal when received.
 				n.processSignal(sig)
-			case <-n.doneCh: // Exit loop when done.
+			case <-n.DoneCh(): // Exit loop when done.
 				return
 			}
 		}
@@ -55,8 +55,8 @@ func (n *SimpleLoopNode) processSignal(sig node.Signal) {
 	if n.condFn == nil || !n.condFn(sig) {
 		// If the condition is not met, send the signal back to the start node.
 		if n.startNode != nil {
-			sig.PrepareForNext()               // Prepare the signal for the next processing stage.
-			sig.ChangeTarget(n.startNode.ID()) // Change the target to the start node.
+			sig = PrepareSignalForNext(sig)
+			sig.NodeID = n.startNode.ID()
 			n.LogInfo(fmt.Sprintf("Sending to %s", n.startNode.ID()))
 			n.startNode.InputCh() <- sig // Send the signal back to the start node.
 		}

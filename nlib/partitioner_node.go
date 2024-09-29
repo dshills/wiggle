@@ -1,8 +1,6 @@
 package nlib
 
 import (
-	"sync"
-
 	"github.com/dshills/wiggle/node"
 )
 
@@ -12,23 +10,22 @@ var _ node.PartitionerNode = (*SimplePartitionerNode)(nil)
 type SimplePartitionerNode struct {
 	EmptyNode
 	partitionFunc node.PartitionerFn
-	childNodes    []node.Node
-	waitGroup     *sync.WaitGroup
+	factory       node.Factory
+	integrator    node.IntegratorNode
 }
 
 func NewSimplePartitionerNode(partitionFunc node.PartitionerFn, l node.Logger, sm node.StateManager, name string) *SimplePartitionerNode {
 	n := SimplePartitionerNode{
 		partitionFunc: partitionFunc,
-		waitGroup:     &sync.WaitGroup{},
 	}
 	n.Init(l, sm, name)
 
 	go func() {
 		for {
 			select {
-			case sig := <-n.inCh:
+			case sig := <-n.InputCh():
 				n.processSignal(sig)
-			case <-n.doneCh:
+			case <-n.DoneCh():
 				return
 			}
 		}
@@ -41,33 +38,45 @@ func (n *SimplePartitionerNode) SetPartitionFunc(partitionFunc node.PartitionerF
 	n.partitionFunc = partitionFunc
 }
 
-func (n *SimplePartitionerNode) SetChildNodes(nodes ...node.Node) {
-	n.childNodes = nodes
+func (n *SimplePartitionerNode) SetIntegrator(integrator node.IntegratorNode) {
+	n.integrator = integrator
+}
+
+func (n *SimplePartitionerNode) SetNodeFactory(factory node.Factory) {
+	n.factory = factory
 }
 
 func (n *SimplePartitionerNode) processSignal(sig node.Signal) {
+	if n.partitionFunc == nil || n.factory == nil {
+		n.LogError("missing required partition function or node factory function, failing")
+		n.StateManager().Complete()
+		return
+	}
 	sig = n.PreProcessSignal(sig)
 
 	// Partition the signal's data
-	parts, err := n.partitionFunc(sig.Data.String())
+	parts, err := n.partitionFunc(sig.Task.String())
 	if err != nil {
 		n.LogErr(err)
 		return
 	}
 
-	// Send each partitioned part to child nodes for processing
-	for _, part := range parts {
-		for _, child := range n.childNodes {
-			n.waitGroup.Add(1)
-			go func(child node.Node, part string) {
-				defer n.waitGroup.Done()
-				newSignal := sig // Clone signal to avoid mutation issues
-				newSignal.Data = NewStringData(part)
-				child.InputCh() <- newSignal
-			}(child, part)
-		}
+	// Create a set of Nodes to handle the partitioned data
+	nodes := n.factory(len(parts))
+
+	// Tell the IntegratorNode what's coming
+	group := NewGroup(n.ID(), nodes...)
+	if n.integrator != nil {
+		n.integrator.AddGroup(group)
 	}
-	n.waitGroup.Wait()
+
+	// Send it...
+	for i, task := range parts {
+		newSig := SignalFromSignal(sig, NewStringData(task)) // Create a new Signal based on the current
+		newSig = GroupSignal(newSig, group, nodes[i])        // Add the Group meta tracking data
+		newSig.NodeID = nodes[i].ID()                        // Set the new Node ID
+		nodes[i].InputCh() <- newSig                         // Send to Node
+	}
 
 	sig = n.PostProcesSignal(sig)
 	n.SendToConnected(sig)

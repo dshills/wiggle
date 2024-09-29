@@ -5,7 +5,7 @@ import "io"
 // Node represents a generic processing unit in a chain of tasks.
 // It processes incoming signals, executes actions (e.g., transforming data, querying a model),
 // and forwards the processed signal to connected nodes. The interface allows for modular design,
-// enabling different types of nodes (e.g., action nodes, query nodes, partitioners, integrators)
+// enabling different types of nodes (e.g., AI nodes, partitioners, integrators)
 // to be chained together, ensuring flexible and scalable workflows.
 type Node interface {
 	Connect(...Node)
@@ -25,6 +25,13 @@ type Node interface {
 // by multiple nodes in the chain.
 type PartitionerFn func(string) ([]string, error)
 
+// Factory is a function that will return an arbitrary number of Nodes
+// It is used by PartitionerNode after breaking a Signal into smaller parts
+// It will call the Factory function to create nodes to process the chunks.
+// This can be as simple as a single Node or it could return a Set Node that
+// is comprised of many Nodes.
+type Factory func(count int) []Node
+
 // PartitionerNode splits the input signal into smaller tasks or chunks
 // using a specified partition function. These partitions are then distributed
 // to child nodes for parallel processing. The interface allows for efficient
@@ -33,7 +40,8 @@ type PartitionerFn func(string) ([]string, error)
 type PartitionerNode interface {
 	Node
 	SetPartitionFunc(partitionFunc PartitionerFn)
-	SetChildNodes(nodes ...Node)
+	SetNodeFactory(Factory)
+	SetIntegrator(IntegratorNode)
 }
 
 // IntegratorFn is a function type that takes the results of partitioned tasks
@@ -42,14 +50,25 @@ type PartitionerNode interface {
 // final output is consistent and meaningful.
 type IntegratorFn func([]string) (string, error)
 
-// IntegratorNode gathers and combines the results from multiple child nodes
+// Group describes a partitioned set of tasks
+// When passed to an integrator it will collect the outcome of the
+// batch before processing
+// Signals are identified by Meta entries that include
+// the BatchID and the individual TaskID
+type Group struct {
+	OriginatorID string
+	BatchID      string
+	TaskIDs      []string
+}
+
+// IntegratorNode gathers and combines the results from a PartitionerNode
 // into a single coherent output using a specified integrator function.
 // It ensures that the partitioned tasks, once processed, are merged back into
 // a unified result, maintaining data consistency and flow across the node chain.
 type IntegratorNode interface {
 	Node
 	SetIntegratorFunc(integratorFunc IntegratorFn)
-	SetChildNodes(nodes ...Node)
+	AddGroup(Group)
 }
 
 // ConditionFn is a function type that takes a Signal and returns
@@ -97,5 +116,6 @@ type InputNode interface {
 type SetNode interface {
 	Node
 	SetStartNode(Node)
+	SetFinalNode(Node)
 	SetCoordinator(Coordinator)
 }
