@@ -18,7 +18,7 @@ Table of Contents
 - [PartitionerNode](#PartitionerNode)
 - [IntegratorNode](#IntegratorNode)
 - [LoopNode](#LoopNode)
-- [BrachNode](#BranchNode)
+- [BranchNode](#BranchNode)
 - [OuputNode](#OutputNode)
 - [InputNode](#InputNode)
 - [SetNode](#SetNode)
