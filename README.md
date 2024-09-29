@@ -20,6 +20,7 @@ Table of Contents
 - [OuputNode](#OutputNode)
 - [InputNode](#InputNode)
 - [SetNode](#SetNode)
+- [StateManager](#StateManager)
 - [Guidance](#Guidance)
 - [Hooks](#Hooks)
 - [Coordinator](#Coordinator)
@@ -228,6 +229,19 @@ type SetNode interface {
     SetStartNode(Node)
     SetFinalNode(Node)
     SetCoordinator(Coordinator)
+}
+```
+
+### StateManager
+
+```go
+type StateManager interface {
+	Complete()
+	GetState(Signal) State
+	Register() chan struct{}
+	ShouldFail(error) bool
+	UpdateState(Signal)
+	WaitFor(Node)
 }
 ```
 
