@@ -15,20 +15,20 @@ Table of Contents
 - [Core Concepts](#Core-Concepts)
 - [Signal](#Signal)
 - [Node](#Node)
-- [PartitionerNode](#PartitionerNode)
-- [IntegratorNode](#IntegratorNode)
-- [LoopNode](#LoopNode)
-- [BranchNode](#BranchNode)
-- [OuputNode](#OutputNode)
-- [InputNode](#InputNode)
-- [SetNode](#SetNode)
-- [StateManager](#StateManager)
+- [Partitioner Node](#Partitioner-Node)
+- [Integrator Node](#Integrator-Node)
+- [Loop Node](#Loop-Node)
+- [Branch Node](#Branch-Node)
+- [Ouput Node](#Output-Node)
+- [Input Node](#Input-Node)
+- [Set Node](#Set-Node)
+- [State Manager](#State-Manager)
 - [Guidance](#Guidance)
 - [Hooks](#Hooks)
 - [Coordinator](#Coordinator)
 - [Resource Management](#Resource-Management)
 - [Context Management](#Context-Management)
-- [DataCarrier](#DataCarrier)
+- [Data Carrier](#Data-Carrier)
 - [Example Workflow](#Example-Workflow)
 - [Contributing](#Contributing)
 - [License](#license)
@@ -159,7 +159,7 @@ type Node interface {
 }
 ```
 
-### PartitionerNode
+### Partitioner Node
 
 A PartitionerNode splits large or complex tasks into smaller chunks using a partitioning function (PartitionerFn), enabling parallel processing by downstream nodes. This design allows for efficient handling of large-scale data processing.
 
@@ -172,7 +172,7 @@ type PartitionerNode interface {
 }
 ```
 
-### IntegratorNode
+### Integrator Node
 
 The IntegratorNode aggregates the results from partitioned tasks using an integrator function (IntegratorFn). This ensures that all the partitioned results are combined into a single, coherent output, maintaining data consistency throughout the workflow.
 
@@ -184,7 +184,7 @@ type IntegratorNode interface {
 }
 ```
 
-### LoopNode
+### Loop Node
 
 ```go
 type LoopNode interface {
@@ -194,7 +194,7 @@ type LoopNode interface {
 }
 ```
 
-### BranchNode
+### Branch Node
 
 ```go
 type BranchNode interface {
@@ -203,7 +203,7 @@ type BranchNode interface {
 }
 ```
 
-### OutputNode
+### Output Node
 
 ```go
 type OutputNode interface {
@@ -212,7 +212,7 @@ type OutputNode interface {
 }
 ```
 
-### InputNode
+### Input Node
 
 ```go
 type InputNode interface {
@@ -221,7 +221,7 @@ type InputNode interface {
 }
 ```
 
-### SetNode
+### Set Node
 
 A SetNode represents a collection of nodes that form a processing pipeline. It organizes nodes into a structured chain and manages the flow of data between them. A set allows you to define a complex workflow with multiple interconnected nodes. Because it is a Node itself it can be used like any other node.
 
@@ -234,7 +234,7 @@ type SetNode interface {
 }
 ```
 
-### StateManager
+### State Manager
 
 ```go
 type StateManager interface {
@@ -302,7 +302,7 @@ type ContextManager interface {
 }
 ```
 
-### DataCarrier
+### Data Carrier
 
 The DataCarrier provides an abstraction for handling different types of data, such as strings, JSON, or vectors, within a signal. It ensures flexibility in how data is passed and processed across the workflow.
 
