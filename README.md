@@ -11,12 +11,16 @@ Table of Contents
 - [Installation](#Installation)
 - [Basic Example](#Basic-Example)
 - [Core Concepts](#Core-Concepts)
-- [Node](#Node)
 - [Signal](#Signal)
-- [Guidance](#Guidance)
+- [Node](#Node)
 - [PartitionerNode](#PartitionerNode)
 - [IntegratorNode](#IntegratorNode)
-- [Set](#Set)
+- [LoopNode](#LoopNode)
+- [BrachNode](#BranchNode)
+- [OuputNode](#OutputNode)
+- [InputNode](#InputNode)
+- [SetNode](#SetNode)
+- [Guidance](#Guidance)
 - [Hooks](#Hooks)
 - [Coordinator](#Coordinator)
 - [Resource Management](#Resource-Management)
@@ -117,6 +121,23 @@ In this example:
 
 ## Core Concepts
 
+### Signal
+
+A Signal represents the data structure passed between nodes, containing the main data being processed, its context, and any metadata or history required. It ensures smooth and coherent propagation of data and context across the entire node chain.
+
+```go
+type Signal struct {
+	NodeID   string
+	Data     DataCarrier
+	Response DataCarrier
+	Context  ContextManager
+	Meta     []Meta
+	History  HistoryManager
+	Err      error
+	Status   string
+}
+```
+
 ### Node
 
 A Node is the core processing unit in Wiggle. It processes incoming signals, executes actions (such as querying a model or transforming data), and forwards the processed signal to connected nodes. The interface is modular, allowing different node types to be chained together for flexible workflows.
@@ -135,32 +156,6 @@ type Node interface {
 }
 ```
 
-### Signal
-
-A Signal represents the data structure passed between nodes, containing the main data being processed, its context, and any metadata or history required. It ensures smooth and coherent propagation of data and context across the entire node chain.
-
-```go
-type Signal struct {
-	NodeID   string
-	Data     DataCarrier
-	Response DataCarrier
-	Context  ContextManager
-	Meta     []Meta
-	History  HistoryManager
-	Err      error
-	Status   string
-}
-```
-### Guidance
-
-Guidance generates structured instructions for processing based on the signal’s content and metadata. It typically interfaces with an LLM.
-
-```go
-type Guidance interface {
-    Generate(signal Signal) (Signal, error)
-}
-```
-
 ### PartitionerNode
 
 A PartitionerNode splits large or complex tasks into smaller chunks using a partitioning function (PartitionerFn), enabling parallel processing by downstream nodes. This design allows for efficient handling of large-scale data processing.
@@ -168,8 +163,9 @@ A PartitionerNode splits large or complex tasks into smaller chunks using a part
 ```go
 type PartitionerNode interface {
     Node
-    SetPartitionFunc(partitionFunc PartitionerFn)
-    SetChildNodes(nodes ...Node)
+    SetPartitionFunc(PartitionerFn)
+    SetNodeFactory(Factory)
+    SetIntegrator(IntegratorNode)
 }
 ```
 
@@ -181,21 +177,70 @@ The IntegratorNode aggregates the results from partitioned tasks using an integr
 type IntegratorNode interface {
     Node
     SetIntegratorFunc(integratorFunc IntegratorFn)
-    SetChildNodes(nodes ...Node)
+    AddGroup(Group)
 }
 ```
 
-### Set
-
-A Set represents a collection of nodes that form a processing pipeline. It organizes nodes into a structured chain and manages the flow of data between them. A set allows you to define a complex workflow with multiple interconnected nodes.
+### LoopNode
 
 ```go
-type Set interface {
+type LoopNode interface {
+	Node
+	SetStartNode(Node)
+	SetConditionFunc(ConditionFn)
+}
+```
+
+### BranchNode
+
+```go
+type BranchNode interface {
+	Node
+	AddConditional(Node, ConditionFn)
+}
+```
+
+### OutputNode
+
+```go
+type OutputNode interface {
+	Node
+	SetWriter(io.Writer)
+}
+```
+
+### InputNode
+
+```go
+type InputNode interface {
+	Node
+	SetReader(io.Reader)
+}
+```
+
+### SetNode
+
+A SetNode represents a collection of nodes that form a processing pipeline. It organizes nodes into a structured chain and manages the flow of data between them. A set allows you to define a complex workflow with multiple interconnected nodes. Because it is a Node itself it can be used like any other node.
+
+```go
+type SetNode interface {
     Node
     SetStartNode(Node)
+    SetFinalNode(Node)
     SetCoordinator(Coordinator)
 }
 ```
+
+### Guidance
+
+Guidance generates structured instructions for processing based on the signal’s content and metadata. It typically interfaces with an LLM.
+
+```go
+type Guidance interface {
+    Generate(signal Signal) (Signal, error)
+}
+```
+
 
 ### Hooks
 
