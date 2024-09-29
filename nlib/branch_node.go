@@ -53,6 +53,7 @@ func (n *SimpleBranchNode) processSignal(sig node.Signal) {
 
 	// No specific processing here, but post-processing is handled next.
 	sig = n.PostProcesSignal(sig)
+	sig.Status = StatusInProcess
 
 	// Iterate over the conditions to find a match.
 	for _, cond := range n.conditions {
@@ -65,6 +66,7 @@ func (n *SimpleBranchNode) processSignal(sig node.Signal) {
 			return
 		}
 	}
+	sig.Status = StatusSuccess
 
 	// If no conditions are met, send the signal to the next connected node.
 	n.SendToConnected(sig)

@@ -50,6 +50,7 @@ func (n *SimpleLoopNode) processSignal(sig node.Signal) {
 
 	// No specific processing here, but post-processing is handled next.
 	sig = n.PostProcesSignal(sig)
+	sig.Status = StatusInProcess
 
 	// Check if the condition is met (if condFn is not nil).
 	if n.condFn == nil || !n.condFn(sig) {
@@ -61,6 +62,7 @@ func (n *SimpleLoopNode) processSignal(sig node.Signal) {
 			n.startNode.InputCh() <- sig // Send the signal back to the start node.
 		}
 	}
+	sig.Status = StatusSuccess
 
 	// After looping, send the signal to the connected nodes in the chain.
 	n.SendToConnected(sig)

@@ -40,6 +40,8 @@ func (n *InteractiveNode) listen() {
 
 			sig = n.PreProcessSignal(sig) // Run pre-processing hooks on the signal.
 
+			sig.Status = StatusInProcess
+
 			// Prompt the user for input.
 			reader := bufio.NewReader(os.Stdin)
 			fmt.Print("\nEnter your question (type /quit to stop): ")
@@ -57,6 +59,7 @@ func (n *InteractiveNode) listen() {
 			// Set the user's input as the signal's response data.
 			sig.Result = NewStringData(query)
 
+			sig.Status = StatusSuccess
 			// Run post-processing hooks and forward the signal to connected nodes.
 			sig = n.PostProcesSignal(sig)
 			n.SendToConnected(sig)

@@ -89,6 +89,7 @@ func (n *SimpleIntegratorNode) processGroup(sig node.Signal, batchID string) {
 	n.sigM.RLock()
 	defer n.sigM.RUnlock()
 
+	sig.Status = StatusInProcess
 	results := []string{}
 	for _, gsig := range n.grpSignals[batchID] {
 		results = append(results, gsig.Result.String())
@@ -99,10 +100,13 @@ func (n *SimpleIntegratorNode) processGroup(sig node.Signal, batchID string) {
 	final, err := n.integratorFunc(results)
 	if err != nil {
 		n.LogErr(err)
+		sig.Err = err.Error()
+		sig.Status = StatusFail
 		n.StateManager().Complete()
 		return
 	}
 	sig.Result = NewStringData(final)
+	sig.Status = StatusSuccess
 	sig = n.PostProcesSignal(sig)
 	n.SendToConnected(sig)
 }

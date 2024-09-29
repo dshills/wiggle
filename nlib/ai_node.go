@@ -42,12 +42,14 @@ func (n *AINode) processSignal(sig node.Signal) {
 	var ctx = context.TODO() // Initialize a context for managing requests
 	sig = n.PreProcessSignal(sig)
 
+	sig.Status = StatusInProcess
+
 	// Generate guidance (possibly modify the signal) before sending it to the LLM
 	sig, err = n.GenGuidance(sig)
 	if err != nil {
 		n.LogErr(err) // Log any errors during guidance generation
+		sig.Err = err.Error()
 	}
-	fmt.Printf("%+v\n", sig)
 
 	n.LogInfo(fmt.Sprintf("Sending to llm: %v", sig.Task.String())) // Log the data being sent to the LLM
 
@@ -55,7 +57,11 @@ func (n *AINode) processSignal(sig node.Signal) {
 	sig, err = n.CallLLM(ctx, sig)
 	if err != nil {
 		n.LogErr(err) // Log any errors returned by the LLM
+		sig.Err = err.Error()
+		sig.Status = StatusFail
+		return
 	}
+	sig.Status = StatusSuccess
 
 	sig = n.PostProcesSignal(sig)
 	n.SendToConnected(sig)

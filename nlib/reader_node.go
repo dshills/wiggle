@@ -35,13 +35,16 @@ func NewSimpleStringReaderNode(r io.Reader, l node.Logger, sm node.StateManager,
 func (n *SimpleStringReaderNode) processSignal(sig node.Signal) {
 	sig = n.PreProcessSignal(sig)
 
+	sig.Status = StatusInProcess
 	byts, err := io.ReadAll(n.reader)
 	if err != nil {
 		n.LogErr(err)
+		sig.Err = err.Error()
 		return
 	}
 	sig.Result = NewStringData(string(byts))
 
+	sig.Status = StatusSuccess
 	sig = n.PostProcesSignal(sig)
 	n.SendToConnected(sig)
 }

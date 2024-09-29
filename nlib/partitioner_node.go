@@ -54,13 +54,17 @@ func (n *SimplePartitionerNode) processSignal(sig node.Signal) {
 	}
 	sig = n.PreProcessSignal(sig)
 
+	sig.Status = StatusInProcess
+
 	// Partition the signal's data
 	parts, err := n.partitionFunc(sig.Task.String())
 	if err != nil {
 		n.LogErr(err)
+		sig.Err = err.Error()
 		return
 	}
 
+	sig.Status = StatusSuccess
 	// Create a set of Nodes to handle the partitioned data
 	nodes := n.factory(len(parts))
 

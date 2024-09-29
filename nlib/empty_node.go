@@ -7,6 +7,12 @@ import (
 	"github.com/dshills/wiggle/node"
 )
 
+const (
+	StatusSuccess   = "success"
+	StatusInProcess = "in-process"
+	StatusFail      = "fail"
+)
+
 // Compile-time check
 var _ node.Node = (*EmptyNode)(nil)
 

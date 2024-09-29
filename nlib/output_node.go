@@ -29,11 +29,16 @@ func NewOutputStringNode(w io.Writer, l node.Logger, sm node.StateManager, name 
 			case sig := <-n.InputCh(): // Receive a signal from the input channel.
 				sig = n.PreProcessSignal(sig) // Run pre-processing hooks.
 
+				sig.Status = StatusInProcess
 				// Write the signal's data (response) to the provided writer.
 				_, err := n.writer.Write([]byte(sig.Task.String()))
 				if err != nil {
 					n.LogErr(err) // Log any errors encountered during writing.
+					sig.Err = err.Error()
+					sig.Status = StatusFail
+					return
 				}
+				sig.Status = StatusSuccess
 
 				sig = n.PostProcesSignal(sig) // Run post-processing hooks.
 				n.SendToConnected(sig)        // Send the signal to the connected nodes.
