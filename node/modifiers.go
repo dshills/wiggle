@@ -64,7 +64,6 @@ type StateManager interface {
 	Complete()
 	GetState(Signal) State
 	Register() chan struct{}
-	ShouldFail(error) bool
 	UpdateState(Signal)
 	WaitFor(Node)
 }
@@ -107,4 +106,21 @@ type DataCarrier interface {
 	Vector() []float32
 	String() string
 	JSON() []byte
+}
+
+type ErrGuide int
+
+const (
+	ErrGuideNotAnError ErrGuide = 0
+	ErrGuideRetry      ErrGuide = 1
+	ErrGuideIgnore     ErrGuide = 2
+	ErrGuideFail       ErrGuide = 3
+)
+
+// ErrorGuidance provides guidance on how a particular node
+// should manage errors. It is not required and default behavior on error
+// is to fail
+type ErrorGuidance interface {
+	Retries() int
+	Action(err error) ErrGuide
 }

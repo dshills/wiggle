@@ -11,6 +11,7 @@ type Node interface {
 	Connect(...Node)
 	ID() string
 	InputCh() chan Signal
+	SetErrorGuidance(ErrorGuidance)
 	SetGuidance(Guidance)
 	SetHooks(Hooks)
 	SetID(string)

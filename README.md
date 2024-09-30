@@ -241,7 +241,6 @@ type StateManager interface {
 	Complete()
 	GetState(Signal) State
 	Register() chan struct{}
-	ShouldFail(error) bool
 	UpdateState(Signal)
 	WaitFor(Node)
 }

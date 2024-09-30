@@ -1,7 +1,6 @@
 package nlib
 
 import (
-	"errors"
 	"sync"
 
 	"github.com/dshills/wiggle/node"
@@ -15,8 +14,6 @@ var _ node.StateManager = (*SimpleStateManager)(nil)
 type SimpleStateManager struct {
 	stateMap   map[string]node.State // Maps NodeID to their respective state
 	mu         sync.Mutex            // Mutex to ensure safe concurrent access to stateMap
-	errList    []error               // List of known errors for comparison
-	errStrings []string              // List of known error strings for comparison
 	doneChs    []chan struct{}       // Channels for nodes to signal completion
 	nodeWaitID string                // ID of the node being waited on for completion
 	waitCh     chan struct{}         // Channel to wait on
@@ -66,22 +63,6 @@ func (s *SimpleStateManager) Register() chan struct{} {
 	ch := make(chan struct{})         // Create a new completion channel
 	s.doneChs = append(s.doneChs, ch) // Add it to the list of done channels
 	return ch                         // Return the new channel
-}
-
-// ShouldFail determines if an error should cause failure, checking against
-// known error types and error strings.
-func (s *SimpleStateManager) ShouldFail(err error) bool {
-	for _, e := range s.errList { // Check if the error matches any known errors
-		if errors.Is(err, e) {
-			return true
-		}
-	}
-	for _, es := range s.errStrings { // Check if the error string matches any known error strings
-		if es == err.Error() {
-			return true
-		}
-	}
-	return false
 }
 
 // Complete signals completion to all registered channels.

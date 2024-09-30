@@ -27,6 +27,7 @@ type EmptyNode struct {
 	resourceMgr node.ResourceManager
 	stateMgr    node.StateManager
 	doneCh      chan struct{}
+	errGuide    node.ErrorGuidance
 }
 
 func (n *EmptyNode) Init(l node.Logger, mgr node.StateManager, id string) {
@@ -49,6 +50,24 @@ func (n *EmptyNode) SendToConnected(sig node.Signal) {
 	}
 }
 
+func (n *EmptyNode) SetErrorGuidance(errGuide node.ErrorGuidance) {
+	n.errGuide = errGuide
+}
+
+func (n *EmptyNode) ErrorAction(err error) node.ErrGuide {
+	if n.errGuide == nil {
+		return node.ErrGuideFail
+	}
+	return n.errGuide.Action(err)
+}
+
+func (n *EmptyNode) ErrorRetries() int {
+	if n.errGuide == nil {
+		return 0
+	}
+	return n.errGuide.Retries()
+}
+
 func (n *EmptyNode) ID() string {
 	return n.id
 }
@@ -59,13 +78,6 @@ func (n *EmptyNode) MakeInputCh() {
 
 func (n *EmptyNode) InputCh() chan node.Signal {
 	return n.inCh
-}
-
-func (n *EmptyNode) ShouldFail(err error) bool {
-	if n.stateMgr != nil {
-		return n.stateMgr.ShouldFail(err)
-	}
-	return false
 }
 
 func (n *EmptyNode) SetGuidance(guide node.Guidance) {

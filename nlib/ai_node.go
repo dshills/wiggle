@@ -47,7 +47,7 @@ func (n *AINode) processSignal(sig node.Signal) {
 	// Generate guidance (possibly modify the signal) before sending it to the LLM
 	sig, err = n.GenGuidance(sig)
 	if err != nil {
-		n.LogErr(err) // Log any errors during guidance generation
+		n.LogErr(err)
 		sig.Err = err.Error()
 	}
 
@@ -56,7 +56,7 @@ func (n *AINode) processSignal(sig node.Signal) {
 	// Call the LLM to process the signal
 	sig, err = n.CallLLM(ctx, sig)
 	if err != nil {
-		n.LogErr(err) // Log any errors returned by the LLM
+		n.LogErr(err)
 		sig.Err = err.Error()
 		sig.Status = StatusFail
 		return
