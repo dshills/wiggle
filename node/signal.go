@@ -1,5 +1,7 @@
 package node
 
+import "github.com/dshills/wiggle/schema"
+
 // Signal represents the core data structure passed between nodes in a processing chain.
 // It contains the data being processed, contextual information, metadata, response data,
 // and a history of transformations. Signals enable the flow of information across nodes,
@@ -10,7 +12,7 @@ type Signal struct {
 	Task    DataCarrier
 	Context ContextManager
 	Result  DataCarrier
-	Schema  string
+	Schema  schema.Schema
 	Meta    []Meta
 	History HistoryManager
 	Err     string
