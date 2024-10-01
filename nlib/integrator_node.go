@@ -1,7 +1,10 @@
 package nlib
 
 import (
+	"context"
+	"fmt"
 	"sync"
+	"time"
 
 	"github.com/dshills/wiggle/node"
 )
@@ -45,11 +48,16 @@ func (n *SimpleIntegratorNode) SetIntegratorFunc(integratorFunc node.IntegratorF
 
 func (n *SimpleIntegratorNode) processSignal(sig node.Signal) {
 	if n.integratorFunc == nil {
-		n.LogError("missing required integratorFunc, failing")
+		n.LogErr(fmt.Errorf("missing required integratorFunc, failing"))
 		n.StateManager().Complete()
 		return
 	}
-	sig = n.PreProcessSignal(sig)
+	var err error
+	sig, err = n.PreProcessSignal(sig)
+	if err != nil {
+		n.Fail(sig, err)
+		return
+	}
 
 	grp := n.inGroup(sig)
 	if grp != nil {
@@ -58,8 +66,18 @@ func (n *SimpleIntegratorNode) processSignal(sig node.Signal) {
 		return
 	}
 
-	sig = n.PostProcesSignal(sig)
-	n.SendToConnected(sig)
+	sig, err = n.PostProcessSignal(sig)
+	if err != nil {
+		n.Fail(sig, err)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel() // Ensure the context is cancelled once we're done
+	if err := n.SendToConnected(ctx, sig); err != nil {
+		n.Fail(sig, err)
+		return
+	}
 }
 
 func (n *SimpleIntegratorNode) inGroup(sig node.Signal) *node.Group {
@@ -107,8 +125,19 @@ func (n *SimpleIntegratorNode) processGroup(sig node.Signal, batchID string) {
 	}
 	sig.Result = NewStringData(final)
 	sig.Status = StatusSuccess
-	sig = n.PostProcesSignal(sig)
-	n.SendToConnected(sig)
+	sig, err = n.PostProcessSignal(sig)
+	if err != nil {
+		n.Fail(sig, err)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel() // Ensure the context is cancelled once we're done
+
+	if err := n.SendToConnected(ctx, sig); err != nil {
+		n.Fail(sig, err)
+		return
+	}
 }
 
 func (n *SimpleIntegratorNode) isGroupComplete(batchID string) bool {

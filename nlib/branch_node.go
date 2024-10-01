@@ -1,7 +1,9 @@
 package nlib
 
 import (
+	"context"
 	"fmt"
+	"time"
 
 	"github.com/dshills/wiggle/node"
 )
@@ -49,10 +51,20 @@ func NewSimpleBranchNode(l node.Logger, sm node.StateManager, name string) *Simp
 // If a condition is met, the signal is sent to the corresponding target node.
 // If no conditions are met, the signal is sent to the connected nodes.
 func (n *SimpleBranchNode) processSignal(sig node.Signal) {
-	sig = n.PreProcessSignal(sig) // Run pre-processing hooks on the signal.
+	var err error
+	sig, err = n.PreProcessSignal(sig) // Run pre-processing hooks on the signal.
+	if err != nil {
+		n.Fail(sig, err)
+		return
+	}
 
 	// No specific processing here, but post-processing is handled next.
-	sig = n.PostProcesSignal(sig)
+	sig, err = n.PostProcessSignal(sig)
+	if err != nil {
+		n.Fail(sig, err)
+		return
+	}
+
 	sig.Status = StatusInProcess
 
 	// Iterate over the conditions to find a match.
@@ -68,8 +80,13 @@ func (n *SimpleBranchNode) processSignal(sig node.Signal) {
 	}
 	sig.Status = StatusSuccess
 
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel() // Ensure the context is cancelled once we're done
 	// If no conditions are met, send the signal to the next connected node.
-	n.SendToConnected(sig)
+	if err := n.SendToConnected(ctx, sig); err != nil {
+		n.Fail(sig, err)
+		return
+	}
 }
 
 // AddConditional adds a new condition and target node to the branch.

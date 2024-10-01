@@ -2,9 +2,11 @@ package nlib
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/dshills/wiggle/node"
 )
@@ -33,12 +35,17 @@ func NewInteractiveNode(l node.Logger, sm node.StateManager, name string) *Inter
 // listen listens for incoming signals and processes them by interacting with the user.
 // It prompts the user to enter a query and sends that query as the signal's response.
 func (n *InteractiveNode) listen() {
+	var err error
 	for {
 		select {
 		case sig := <-n.inCh: // Wait for an incoming signal on the input channel.
 			n.LogInfo("Received signal") // Log that a signal has been received.
 
-			sig = n.PreProcessSignal(sig) // Run pre-processing hooks on the signal.
+			sig, err = n.PreProcessSignal(sig)
+			if err != nil {
+				n.Fail(sig, err)
+				return
+			}
 
 			sig.Status = StatusInProcess
 
@@ -61,8 +68,20 @@ func (n *InteractiveNode) listen() {
 
 			sig.Status = StatusSuccess
 			// Run post-processing hooks and forward the signal to connected nodes.
-			sig = n.PostProcesSignal(sig)
-			n.SendToConnected(sig)
+
+			sig, err = n.PostProcessSignal(sig)
+			if err != nil {
+				n.Fail(sig, err)
+				return
+			}
+
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			defer cancel() // Ensure the context is cancelled once we're done
+
+			if err := n.SendToConnected(ctx, sig); err != nil {
+				n.Fail(sig, err)
+				return
+			}
 
 		case <-n.doneCh: // Exit the function if the done channel is closed.
 			return

@@ -1,6 +1,10 @@
 package nlib
 
 import (
+	"context"
+	"fmt"
+	"time"
+
 	"github.com/dshills/wiggle/node"
 )
 
@@ -47,12 +51,17 @@ func (n *SimplePartitionerNode) SetNodeFactory(factory node.Factory) {
 }
 
 func (n *SimplePartitionerNode) processSignal(sig node.Signal) {
+	var err error
 	if n.partitionFunc == nil || n.factory == nil {
-		n.LogError("missing required partition function or node factory function, failing")
-		n.StateManager().Complete()
+		err := fmt.Errorf("missing required partition function or node factory function, failing")
+		n.Fail(sig, err)
 		return
 	}
-	sig = n.PreProcessSignal(sig)
+	sig, err = n.PreProcessSignal(sig)
+	if err != nil {
+		n.Fail(sig, err)
+		return
+	}
 
 	sig.Status = StatusInProcess
 
@@ -82,6 +91,17 @@ func (n *SimplePartitionerNode) processSignal(sig node.Signal) {
 		nodes[i].InputCh() <- newSig                         // Send to Node
 	}
 
-	sig = n.PostProcesSignal(sig)
-	n.SendToConnected(sig)
+	sig, err = n.PostProcessSignal(sig)
+	if err != nil {
+		n.Fail(sig, err)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel() // Ensure the context is cancelled once we're done
+
+	if err := n.SendToConnected(ctx, sig); err != nil {
+		n.Fail(sig, err)
+		return
+	}
 }

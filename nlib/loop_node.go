@@ -1,7 +1,9 @@
 package nlib
 
 import (
+	"context"
 	"fmt"
+	"time"
 
 	"github.com/dshills/wiggle/node"
 )
@@ -46,10 +48,20 @@ func NewSimpleLoopNode(start node.Node, condFn node.ConditionFn, l node.Logger, 
 // processSignal handles the incoming signal, checks the condition, and either sends
 // it back to the start node or forwards it to the connected nodes.
 func (n *SimpleLoopNode) processSignal(sig node.Signal) {
-	sig = n.PreProcessSignal(sig) // Run any pre-processing hooks on the signal.
+	var err error
+
+	sig, err = n.PreProcessSignal(sig)
+	if err != nil {
+		n.Fail(sig, err)
+		return
+	}
 
 	// No specific processing here, but post-processing is handled next.
-	sig = n.PostProcesSignal(sig)
+	sig, err = n.PostProcessSignal(sig)
+	if err != nil {
+		n.Fail(sig, err)
+		return
+	}
 	sig.Status = StatusInProcess
 
 	// Check if the condition is met (if condFn is not nil).
@@ -64,8 +76,13 @@ func (n *SimpleLoopNode) processSignal(sig node.Signal) {
 	}
 	sig.Status = StatusSuccess
 
-	// After looping, send the signal to the connected nodes in the chain.
-	n.SendToConnected(sig)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel() // Ensure the context is cancelled once we're done
+
+	if err := n.SendToConnected(ctx, sig); err != nil {
+		n.Fail(sig, err)
+		return
+	}
 }
 
 // SetStartNode sets the start node where the signal will be looped back to for re-processing.

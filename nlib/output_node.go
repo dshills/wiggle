@@ -1,7 +1,9 @@
 package nlib
 
 import (
+	"context"
 	"io"
+	"time"
 
 	"github.com/dshills/wiggle/node"
 )
@@ -24,10 +26,15 @@ func NewOutputStringNode(w io.Writer, l node.Logger, sm node.StateManager, name 
 
 	// Goroutine to listen for incoming signals and process them.
 	go func() {
+		var err error
 		for {
 			select {
 			case sig := <-n.InputCh(): // Receive a signal from the input channel.
-				sig = n.PreProcessSignal(sig) // Run pre-processing hooks.
+				sig, err = n.PreProcessSignal(sig)
+				if err != nil {
+					n.Fail(sig, err)
+					return
+				}
 
 				sig.Status = StatusInProcess
 				// Write the signal's data (response) to the provided writer.
@@ -40,8 +47,19 @@ func NewOutputStringNode(w io.Writer, l node.Logger, sm node.StateManager, name 
 				}
 				sig.Status = StatusSuccess
 
-				sig = n.PostProcesSignal(sig) // Run post-processing hooks.
-				n.SendToConnected(sig)        // Send the signal to the connected nodes.
+				sig, err = n.PostProcessSignal(sig)
+				if err != nil {
+					n.Fail(sig, err)
+					return
+				}
+
+				ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+				defer cancel() // Ensure the context is cancelled once we're done
+
+				if err := n.SendToConnected(ctx, sig); err != nil {
+					n.Fail(sig, err)
+					return
+				}
 
 			case <-n.DoneCh(): // If the done channel is closed, exit the loop.
 				return

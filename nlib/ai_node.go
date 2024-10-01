@@ -3,6 +3,7 @@ package nlib
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/dshills/wiggle/llm"
 	"github.com/dshills/wiggle/node"
@@ -40,15 +41,18 @@ func NewAINode(lm llm.LLM, l node.Logger, sm node.StateManager, name string) nod
 func (n *AINode) processSignal(sig node.Signal) {
 	var err error
 	var ctx = context.TODO() // Initialize a context for managing requests
-	sig = n.PreProcessSignal(sig)
+	sig, err = n.PreProcessSignal(sig)
+	if err != nil {
+		n.Fail(sig, err)
+		return
+	}
 
 	sig.Status = StatusInProcess
 
 	// Generate guidance (possibly modify the signal) before sending it to the LLM
 	sig, err = n.GenGuidance(sig)
 	if err != nil {
-		n.LogErr(err)
-		sig.Err = err.Error()
+		n.Fail(sig, err)
 	}
 
 	n.LogInfo(fmt.Sprintf("Sending to llm: %v", sig.Task.String())) // Log the data being sent to the LLM
@@ -56,15 +60,24 @@ func (n *AINode) processSignal(sig node.Signal) {
 	// Call the LLM to process the signal
 	sig, err = n.CallLLM(ctx, sig)
 	if err != nil {
-		n.LogErr(err)
-		sig.Err = err.Error()
-		sig.Status = StatusFail
+		n.Fail(sig, err)
 		return
 	}
 	sig.Status = StatusSuccess
 
-	sig = n.PostProcesSignal(sig)
-	n.SendToConnected(sig)
+	sig, err = n.PostProcessSignal(sig)
+	if err != nil {
+		n.Fail(sig, err)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel() // Ensure the context is cancelled once we're done
+
+	if err := n.SendToConnected(ctx, sig); err != nil {
+		n.Fail(sig, err)
+		return
+	}
 }
 
 // callLLM sends the signal's data to the LLM for processing and returns the modified signal.
