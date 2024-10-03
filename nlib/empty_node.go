@@ -45,6 +45,7 @@ func (n *EmptyNode) Init(l node.Logger, mgr node.StateManager, id string) {
 // Close safely closes the input and done channels of the EmptyNode, ensuring it is only done once
 func (n *EmptyNode) Close() {
 	n.closeOnce.Do(func() {
+		n.LogInfo("Closing")
 		if n.doneCh != nil {
 			close(n.doneCh)
 			n.doneCh = nil
@@ -68,20 +69,20 @@ func (n *EmptyNode) SendToConnected(ctx context.Context, sig node.Signal) error 
 	sig = PrepareSignalForNext(sig)
 
 	n.mu.RLock()
-	nodesCopy := make([]node.Node, len(n.nodes))
-	copy(nodesCopy, n.nodes)
-	n.mu.RUnlock()
+	defer n.mu.RUnlock()
 
-	for _, conNode := range nodesCopy {
+	for _, conNode := range n.nodes {
 		n.LogInfo(fmt.Sprintf("Sending to %s", conNode.ID()))
+		fmt.Printf("Sending to %s\n", conNode.ID())
 		sig.NodeID = conNode.ID()
 
 		select {
-		case conNode.InputCh() <- sig:
 		case <-ctx.Done():
+			fmt.Println("ctx.Done")
 			err := fmt.Errorf("context timeout or cancellation while sending signal to node %s: %v", conNode.ID(), ctx.Err())
 			n.LogErr(err)
 			return err
+		case conNode.InputCh() <- sig:
 		}
 	}
 	return nil
