@@ -26,6 +26,7 @@ func NewSimpleStringReaderNode(r io.Reader, l node.Logger, sm node.StateManager,
 			case sig := <-n.InputCh():
 				n.processSignal(sig)
 			case <-n.DoneCh():
+				n.LogInfo("Received Done")
 				return
 			}
 		}

@@ -10,13 +10,13 @@ import "github.com/dshills/wiggle/schema"
 type Signal struct {
 	NodeID  string
 	Task    DataCarrier
-	Context ContextManager
 	Result  DataCarrier
 	Schema  schema.Schema
 	Meta    []Meta
-	History HistoryManager
 	Err     string
 	Status  string
+	Context ContextManager
+	History HistoryManager
 }
 
 func (s *Signal) AddContext(forID string, data DataCarrier) {

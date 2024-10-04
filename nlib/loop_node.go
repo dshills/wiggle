@@ -37,6 +37,7 @@ func NewSimpleLoopNode(start node.Node, condFn node.ConditionFn, l node.Logger, 
 			case sig := <-n.InputCh(): // Process signal when received.
 				n.processSignal(sig)
 			case <-n.DoneCh(): // Exit loop when done.
+				n.LogInfo("Received Done")
 				return
 			}
 		}

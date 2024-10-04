@@ -32,13 +32,14 @@ type EmptyNode struct {
 	errGuide    node.ErrorGuidance
 	mu          sync.RWMutex
 	closeOnce   sync.Once
+	waitGroup   *sync.WaitGroup
 }
 
 // Init initializes the EmptyNode with a logger, state manager, and ID
 func (n *EmptyNode) Init(l node.Logger, mgr node.StateManager, id string) {
+	n.SetID(id)
 	n.SetLogger(l)
 	n.SetStateManager(mgr)
-	n.SetID(id)
 	n.MakeInputCh(5)
 }
 
@@ -73,7 +74,6 @@ func (n *EmptyNode) SendToConnected(ctx context.Context, sig node.Signal) error 
 
 	for _, conNode := range n.nodes {
 		n.LogInfo(fmt.Sprintf("Sending to %s", conNode.ID()))
-		fmt.Printf("Sending to %s\n", conNode.ID())
 		sig.NodeID = conNode.ID()
 
 		select {
@@ -208,7 +208,7 @@ func (n *EmptyNode) LogDebug(msg string) {
 // log handles the actual logging of messages with a specified severity
 func (n *EmptyNode) log(severity, id, msg string) {
 	if n.logger != nil {
-		n.logger.Log(fmt.Sprintf("severity=%s id=%s msg=%s", severity, id, msg))
+		n.logger.Log(fmt.Sprintf("{ \"severity\": %q, \"id\": %q, \"msg\": %q }", severity, id, msg))
 		return
 	}
 	// Fallback to Stdout
@@ -241,6 +241,11 @@ func (n *EmptyNode) SetStateManager(mgr node.StateManager) {
 	}
 	n.stateMgr = mgr
 	n.doneCh = n.stateMgr.Register()
+	if n.doneCh == nil {
+		n.LogErr(fmt.Errorf("failed to register with StateManager"))
+	} else {
+		n.LogInfo("Registered with StateManager")
+	}
 }
 
 // DoneCh returns the done channel for the EmptyNode
@@ -303,4 +308,8 @@ func (n *EmptyNode) PostProcessSignal(sig node.Signal) (node.Signal, error) {
 	n.UpdateState(sig)
 
 	return sig, nil
+}
+
+func (n *EmptyNode) SetWaitGroup(wg *sync.WaitGroup) {
+	n.waitGroup = wg
 }

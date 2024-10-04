@@ -84,6 +84,7 @@ func (n *InteractiveNode) listen() {
 			}
 
 		case <-n.doneCh: // Exit the function if the done channel is closed.
+			n.LogInfo("Received Done")
 			return
 		}
 	}

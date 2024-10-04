@@ -1,6 +1,8 @@
 package node
 
-import "io"
+import (
+	"io"
+)
 
 // Node represents a generic processing unit in a chain of tasks.
 // It processes incoming signals, executes actions (e.g., transforming data, querying a model),
@@ -26,6 +28,12 @@ type Node interface {
 // by multiple nodes in the chain.
 type PartitionerFn func(string) ([]string, error)
 
+// IntegratorFn is a function type that takes the results of partitioned tasks
+// as input and combines them into a single, coherent output. It is used by
+// PartitionerNode to aggregate and merge processed data, ensuring that the
+// final output is consistent and meaningful.
+type IntegratorFn func([]string) (string, error)
+
 // Factory is a function that will return an arbitrary number of Nodes
 // It is used by PartitionerNode after breaking a Signal into smaller parts
 // It will call the Factory function to create nodes to process the chunks.
@@ -42,34 +50,7 @@ type PartitionerNode interface {
 	Node
 	SetPartitionFunc(partitionFunc PartitionerFn)
 	SetNodeFactory(Factory)
-	SetIntegrator(IntegratorNode)
-}
-
-// IntegratorFn is a function type that takes the results of partitioned tasks
-// as input and combines them into a single, coherent output. It is used by
-// IntegratorNodes to aggregate and merge processed data, ensuring that the
-// final output is consistent and meaningful.
-type IntegratorFn func([]string) (string, error)
-
-// Group describes a partitioned set of tasks
-// When passed to an integrator it will collect the outcome of the
-// batch before processing
-// Signals are identified by Meta entries that include
-// the BatchID and the individual TaskID
-type Group struct {
-	OriginatorID string
-	BatchID      string
-	TaskIDs      []string
-}
-
-// IntegratorNode gathers and combines the results from a PartitionerNode
-// into a single coherent output using a specified integrator function.
-// It ensures that the partitioned tasks, once processed, are merged back into
-// a unified result, maintaining data consistency and flow across the node chain.
-type IntegratorNode interface {
-	Node
-	SetIntegratorFunc(integratorFunc IntegratorFn)
-	AddGroup(Group)
+	SetIntegrationFunc(IntegratorFn)
 }
 
 // ConditionFn is a function type that takes a Signal and returns

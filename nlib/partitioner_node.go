@@ -13,14 +13,16 @@ var _ node.PartitionerNode = (*SimplePartitionerNode)(nil)
 
 type SimplePartitionerNode struct {
 	EmptyNode
-	partitionFunc node.PartitionerFn
-	factory       node.Factory
-	integrator    node.IntegratorNode
+	partitionFunc   node.PartitionerFn
+	integrationFunc node.IntegratorFn
+	factory         node.Factory
 }
 
-func NewSimplePartitionerNode(partitionFunc node.PartitionerFn, l node.Logger, sm node.StateManager, name string) *SimplePartitionerNode {
+func NewSimplePartitionerNode(pfn node.PartitionerFn, ifn node.IntegratorFn, fac node.Factory, l node.Logger, sm node.StateManager, name string) *SimplePartitionerNode {
 	n := SimplePartitionerNode{
-		partitionFunc: partitionFunc,
+		partitionFunc:   pfn,
+		integrationFunc: ifn,
+		factory:         fac,
 	}
 	n.Init(l, sm, name)
 
@@ -30,6 +32,7 @@ func NewSimplePartitionerNode(partitionFunc node.PartitionerFn, l node.Logger, s
 			case sig := <-n.InputCh():
 				n.processSignal(sig)
 			case <-n.DoneCh():
+				n.LogInfo("Received Done")
 				return
 			}
 		}
@@ -42,8 +45,8 @@ func (n *SimplePartitionerNode) SetPartitionFunc(partitionFunc node.PartitionerF
 	n.partitionFunc = partitionFunc
 }
 
-func (n *SimplePartitionerNode) SetIntegrator(integrator node.IntegratorNode) {
-	n.integrator = integrator
+func (n *SimplePartitionerNode) SetIntegrationFunc(integratonFunc node.IntegratorFn) {
+	n.integrationFunc = integratonFunc
 }
 
 func (n *SimplePartitionerNode) SetNodeFactory(factory node.Factory) {
@@ -52,8 +55,8 @@ func (n *SimplePartitionerNode) SetNodeFactory(factory node.Factory) {
 
 func (n *SimplePartitionerNode) processSignal(sig node.Signal) {
 	var err error
-	if n.partitionFunc == nil || n.factory == nil {
-		err := fmt.Errorf("missing required partition function or node factory function, failing")
+	if n.partitionFunc == nil || n.factory == nil || n.integrationFunc == nil {
+		err := fmt.Errorf("partition, integrator, and factory functions are required")
 		n.Fail(sig, err)
 		return
 	}
@@ -73,23 +76,29 @@ func (n *SimplePartitionerNode) processSignal(sig node.Signal) {
 		return
 	}
 
-	sig.Status = StatusSuccess
 	// Create a set of Nodes to handle the partitioned data
 	nodes := n.factory(len(parts))
-
-	// Tell the IntegratorNode what's coming
-	group := NewGroup(n.ID(), nodes...)
-	if n.integrator != nil {
-		n.integrator.AddGroup(group)
-	}
-
-	// Send it...
+	respChan := make(chan node.Signal, len(parts))
+	emptyNode := &EmptyNode{inCh: respChan}
 	for i, task := range parts {
-		newSig := SignalFromSignal(sig, NewStringData(task)) // Create a new Signal based on the current
-		newSig = GroupSignal(newSig, group, nodes[i])        // Add the Group meta tracking data
-		newSig.NodeID = nodes[i].ID()                        // Set the new Node ID
-		nodes[i].InputCh() <- newSig                         // Send to Node
+		newSig := SignalFromSignal(sig, NewStringData(task))
+		newSig.NodeID = nodes[i].ID()
+		nodes[i].Connect(emptyNode)
+		nodes[i].InputCh() <- newSig
 	}
+	respList := []string{}
+	for i := 0; i < len(parts); i++ {
+		recSig := <-respChan
+		respList = append(respList, recSig.Task.String())
+	}
+	response, err := n.integrationFunc(respList)
+	if err != nil {
+		n.LogErr(err)
+		sig.Err = err.Error()
+		return
+	}
+	sig.Result = NewStringData(response)
+	sig.Status = StatusSuccess
 
 	sig, err = n.PostProcessSignal(sig)
 	if err != nil {

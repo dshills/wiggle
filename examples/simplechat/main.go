@@ -21,7 +21,7 @@ func main() {
 	logger := nlib.NewSimpleLogger(log.Default())
 
 	// Create State Manager
-	stateMgr := nlib.NewSimpleStateManager()
+	stateMgr := nlib.NewSimpleStateManager(logger)
 
 	// Define output writer
 	writer := os.Stdout

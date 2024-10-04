@@ -30,6 +30,8 @@ func NewAINode(lm llm.LLM, l node.Logger, sm node.StateManager, name string) nod
 			case sig := <-ai.InputCh():
 				ai.processSignal(sig)
 			case <-ai.DoneCh():
+				ai.LogInfo("Received Done")
+				return
 			}
 		}
 	}()
@@ -39,6 +41,7 @@ func NewAINode(lm llm.LLM, l node.Logger, sm node.StateManager, name string) nod
 
 // listen listens for incoming signals on the input channel and processes them.
 func (n *AINode) processSignal(sig node.Signal) {
+	start := time.Now()
 	var err error
 	var ctx = context.TODO() // Initialize a context for managing requests
 	sig, err = n.PreProcessSignal(sig)
@@ -55,7 +58,7 @@ func (n *AINode) processSignal(sig node.Signal) {
 		n.Fail(sig, err)
 	}
 
-	n.LogInfo(fmt.Sprintf("Sending to llm: %v", sig.Task.String())) // Log the data being sent to the LLM
+	n.LogInfo("Sending to llm") // Log the data being sent to the LLM
 
 	// Call the LLM to process the signal
 	sig, err = n.CallLLM(ctx, sig)
@@ -71,13 +74,11 @@ func (n *AINode) processSignal(sig node.Signal) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel() // Ensure the context is cancelled once we're done
-
 	if err := n.SendToConnected(ctx, sig); err != nil {
 		n.Fail(sig, err)
 		return
 	}
+	n.LogInfo(fmt.Sprintf("Completed in %v", time.Since(start)))
 }
 
 // callLLM sends the signal's data to the LLM for processing and returns the modified signal.

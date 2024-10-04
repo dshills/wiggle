@@ -58,9 +58,3 @@ func SignalFromSignal(sig node.Signal, task node.DataCarrier) node.Signal {
 	newSignal.Result = nil
 	return newSignal
 }
-
-func GroupSignal(sig node.Signal, group node.Group, n node.Node) node.Signal {
-	meta := node.Meta{Key: group.BatchID, Value: n.ID()}
-	sig.Meta = append(sig.Meta, meta)
-	return sig
-}

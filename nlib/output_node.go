@@ -62,6 +62,7 @@ func NewOutputStringNode(w io.Writer, l node.Logger, sm node.StateManager, name 
 				}
 
 			case <-n.DoneCh(): // If the done channel is closed, exit the loop.
+				n.LogInfo("Received done")
 				return
 			}
 		}

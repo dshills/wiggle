@@ -39,6 +39,7 @@ func NewSimpleBranchNode(l node.Logger, sm node.StateManager, name string) *Simp
 			case sig := <-n.inCh: // Receive a signal from the input channel.
 				n.processSignal(sig) // Process the signal.
 			case <-n.DoneCh(): // If the done channel is closed, exit the loop.
+				n.LogInfo("Received Done")
 				return
 			}
 		}

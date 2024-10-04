@@ -37,18 +37,6 @@ func GenerateUUID() string {
 		u[10:])
 }
 
-func NewGroup(orgID string, nodes ...node.Node) node.Group {
-	grp := node.Group{
-		OriginatorID: orgID,
-		BatchID:      GenerateUUID(),
-	}
-	for _, n := range nodes {
-		grp.TaskIDs = append(grp.TaskIDs, n.ID())
-	}
-
-	return grp
-}
-
 func FilterMetaKey(sig node.Signal, key string) []node.Meta {
 	m := []node.Meta{}
 	for _, meta := range sig.Meta {

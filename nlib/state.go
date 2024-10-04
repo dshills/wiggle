@@ -1,6 +1,7 @@
 package nlib
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/dshills/wiggle/node"
@@ -17,11 +18,12 @@ type SimpleStateManager struct {
 	doneChs    []chan struct{}       // Channels for nodes to signal completion
 	nodeWaitID string                // ID of the node being waited on for completion
 	waitCh     chan struct{}         // Channel to wait on
+	logger     node.Logger
 }
 
 // NewSimpleStateManager creates and returns a new instance of SimpleStateManager.
-func NewSimpleStateManager() *SimpleStateManager {
-	sm := SimpleStateManager{stateMap: make(map[string]node.State)}
+func NewSimpleStateManager(l node.Logger) *SimpleStateManager {
+	sm := SimpleStateManager{stateMap: make(map[string]node.State), logger: l}
 	return &sm
 }
 
@@ -60,17 +62,22 @@ func (s *SimpleStateManager) GetState(signal node.Signal) node.State {
 
 // Register creates a channel for signaling completion and adds it to the list of done channels.
 func (s *SimpleStateManager) Register() chan struct{} {
-	ch := make(chan struct{})         // Create a new completion channel
+	ch := make(chan struct{}, 2)      // Create a new completion channel
 	s.doneChs = append(s.doneChs, ch) // Add it to the list of done channels
 	return ch                         // Return the new channel
 }
 
 // Complete signals completion to all registered channels.
 func (s *SimpleStateManager) Complete() {
+	if s.logger != nil {
+		s.logger.Log(fmt.Sprintf("{ \"severity\": %q, \"id\": %q, \"msg\": %q }", "info", "STATEMANAGER", "Complete"))
+	}
 	for _, ch := range s.doneChs { // Iterate through all completion channels
+		s.logger.Log(fmt.Sprintf("{ \"severity\": %q, \"id\": %q, \"msg\": %q }", "info", "STATEMANAGER", "Send to doneCh"))
 		ch <- struct{}{} // Signal completion
 	}
 	if s.waitCh != nil {
+		s.logger.Log(fmt.Sprintf("{ \"severity\": %q, \"id\": %q, \"msg\": %q }", "info", "STATEMANAGER", "Send to WaitCh"))
 		s.waitCh <- struct{}{}
 	}
 }
@@ -78,13 +85,11 @@ func (s *SimpleStateManager) Complete() {
 // WaitFor sets the node to wait for its UpdateState call
 // if Node is nil wait forever
 func (s *SimpleStateManager) WaitFor(n node.Node) {
-	if n == nil {
-		s.waitCh = make(chan struct{})
-		<-s.waitCh
-		return
+	if n != nil {
+		s.nodeWaitID = n.ID() // Store the NodeID to wait on
 	}
-
-	s.nodeWaitID = n.ID() // Store the NodeID to wait on
-	done := s.Register()  // Register the channel for the node
-	<-done                // Wait until the completion signal is received
+	s.logger.Log(fmt.Sprintf("{ \"severity\": %q, \"id\": %q, \"msg\": %q }", "info", "STATEMANAGER", "Creating WaitCh"))
+	s.waitCh = make(chan struct{})
+	<-s.waitCh
+	s.logger.Log(fmt.Sprintf("{ \"severity\": %q, \"id\": %q, \"msg\": %q }", "info", "STATEMANAGER", "Received on WaitCh"))
 }
