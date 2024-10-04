@@ -6,6 +6,9 @@ import (
 	"github.com/dshills/wiggle/llm"
 )
 
+// Compile-time check
+var _ llm.LLM = (*Ollama)(nil)
+
 type Ollama struct {
 	model      string
 	options    Options
@@ -13,7 +16,7 @@ type Ollama struct {
 	httpClient *http.Client
 }
 
-func New(baseURL, model string, options *Options) llm.LLM {
+func New(baseURL, model string, options *Options) *Ollama {
 	o := Ollama{
 		baseURL:    baseURL,
 		model:      model,

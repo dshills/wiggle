@@ -8,6 +8,9 @@ import (
 	"github.com/dshills/wiggle/llm"
 )
 
+// Compile-time check
+var _ llm.LLM = (*OpenAI)(nil)
+
 type OpenAI struct {
 	baseURL string
 	model   string
