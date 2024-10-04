@@ -2,6 +2,8 @@
 
 ![logo](./logo/wiggle_logo_256x256.png)
 
+## Oct 4, 2024: Heavy development period. This README will be out of date for a bit
+
 This Go project provides a flexible and modular framework for chaining multiple Language Learning Models (LLMs), integrating context from various sources like vector databases, and efficiently processing large or complex data by partitioning tasks across nodes and integrating results. The framework is designed to support both large models (e.g., GPT-4) and smaller models (e.g., LLaMA 3.1), ensuring scalability, modularity, and efficiency.
 
 Table of Contents
