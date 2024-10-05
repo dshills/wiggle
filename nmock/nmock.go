@@ -1,93 +1,100 @@
 package nmock
 
 import (
-	"errors"
-	"fmt"
-	"sync"
-
 	"github.com/dshills/wiggle/node"
+	"github.com/stretchr/testify/mock"
 )
 
-// MockStateManager is a mock implementation of the node.StateManager interface
+// Compile-time check
+var _ node.Guidance = (*MockGuidance)(nil)
+var _ node.ResourceManager = (*MockResourceManager)(nil)
+var _ node.Hooks = (*MockHooks)(nil)
+var _ node.StateManager = (*MockStateManager)(nil)
+
+// MockGuidance is a testing mock for Guidance
+type MockGuidance struct {
+	mock.Mock
+}
+
+func (m *MockGuidance) Generate(sig node.Signal) (node.Signal, error) {
+	args := m.Called(sig)
+	return args.Get(0).(node.Signal), args.Error(1)
+}
+
+// MookHooks is a testing mock for Hooks
+type MockHooks struct {
+	mock.Mock
+}
+
+func (m *MockHooks) BeforeAction(sig node.Signal) (node.Signal, error) {
+	args := m.Called(sig)
+	return args.Get(0).(node.Signal), args.Error(1)
+}
+
+func (m *MockHooks) AfterAction(sig node.Signal) (node.Signal, error) {
+	args := m.Called(sig)
+	return args.Get(0).(node.Signal), args.Error(1)
+}
+
+// MockStateManager is a testing mock for StateManager
 type MockStateManager struct {
-	mu            sync.Mutex
-	state         map[string]node.State
-	doneCh        chan struct{}
-	waitForCalled map[string]bool
+	mock.Mock
+	logger      node.Logger
+	coordinator node.Coordinator
+	resource    node.ResourceManager
 }
 
-func NewMockStateManager() *MockStateManager {
-	return &MockStateManager{
-		state:         make(map[string]node.State),
-		doneCh:        make(chan struct{}),
-		waitForCalled: make(map[string]bool),
-	}
+func (m *MockStateManager) SetLogger(l node.Logger) {
+	m.Called(l)
+	m.logger = l
 }
 
-// Complete is a mock method for the StateManager interface, does nothing
-func (m *MockStateManager) Complete() {
-	// No-op for test
+func (m *MockStateManager) Log(message string) {
+	m.Called(message)
 }
 
-// GetState returns the state of the given signal (mock behavior)
-func (m *MockStateManager) GetState(sig node.Signal) node.State {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	return m.state[sig.NodeID]
-}
-
-// Register returns a channel used to signal when registration is complete
-func (m *MockStateManager) Register() chan struct{} {
-	return m.doneCh
-}
-
-// UpdateState updates the mock state for a given signal
 func (m *MockStateManager) UpdateState(sig node.Signal) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.state[sig.NodeID] = node.State{ /* Fill this out as needed */ }
+	m.Called(sig)
 }
 
-// WaitFor simulates waiting for a node (used to verify if this method is called)
-func (m *MockStateManager) WaitFor(n node.Node) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.waitForCalled[n.ID()] = true
+func (m *MockStateManager) GetState(node.Signal) node.State {
+	return node.State{}
 }
 
-// CheckWaitForCalled checks if WaitFor was called for a specific node ID
-func (m *MockStateManager) CheckWaitForCalled(nodeID string) bool {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	return m.waitForCalled[nodeID]
+func (m *MockStateManager) Complete() {
+	m.Called()
 }
 
-type MockLogger struct {
-	entries []string
+func (m *MockStateManager) ResourceManager() node.ResourceManager {
+	args := m.Called()
+	return args.Get(0).(node.ResourceManager)
 }
 
-func (l *MockLogger) Log(msg string) {
-	l.entries = append(l.entries, msg)
+func (m *MockStateManager) SetResourceManager(mgr node.ResourceManager) {
+	m.resource = mgr
 }
 
-func (l *MockLogger) Entries() []string {
-	return l.entries
+func (m *MockStateManager) Coordinator() node.Coordinator {
+	return m.coordinator
 }
 
-var ErrMockRetry = fmt.Errorf("mock error")
-
-type MockErrorGuidance struct {
-	RetriesVal int
-	RetryErr   error
+func (m *MockStateManager) Register() chan struct{} {
+	return nil
 }
 
-func (eg *MockErrorGuidance) Retries() int {
-	return eg.RetriesVal
+func (m *MockStateManager) SetCoordinator(cor node.Coordinator) {
+	m.coordinator = cor
 }
 
-func (eg *MockErrorGuidance) Action(err error) node.ErrGuide {
-	if errors.Is(err, ErrMockRetry) {
-		return node.ErrGuideRetry
-	}
-	return node.ErrGuideFail
+func (m *MockStateManager) WaitFor(node.Node) {
+}
+
+// MockResourceManager is a testing mock for resource manager
+type MockResourceManager struct {
+	mock.Mock
+}
+
+func (m *MockResourceManager) RateLimit(sig node.Signal) error {
+	args := m.Called(sig)
+	return args.Error(0)
 }

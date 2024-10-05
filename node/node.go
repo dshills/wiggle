@@ -18,11 +18,14 @@ type Node interface {
 	SetStateManager(StateManager)
 }
 
+// Options defines a configuration structure that provides various settings
+// for nodes, including an identifier, hooks for extensibility, guidance for processing,
+// and error guidance for handling failures.
 type Options struct {
-	ID            string
-	Hooks         Hooks
-	Guidance      Guidance
-	ErrorGuidance ErrorGuidance
+	ID            string        // A unique identifier for the node or operation
+	Hooks         Hooks         // Hooks provide custom extensibility points for the node's behavior
+	Guidance      Guidance      // Guidance contains instructions or prompts that guide the node's processing logic
+	ErrorGuidance ErrorGuidance // ErrorGuidance contains instructions or prompts for handling errors or failures in processing
 }
 
 // PartitionerFn is a function type that takes an input string and splits it
@@ -128,19 +131,26 @@ type Guidance interface {
 	Generate(signal Signal) (Signal, error)
 }
 
+// ErrGuide defines an integer type used for guiding error handling actions within a node.
 type ErrGuide int
 
+// Constants for ErrGuide represent different error handling strategies.
+// These can be used by nodes to determine the appropriate action when encountering an error.
 const (
-	ErrGuideNotAnError ErrGuide = 0
-	ErrGuideRetry      ErrGuide = 1
-	ErrGuideIgnore     ErrGuide = 2
-	ErrGuideFail       ErrGuide = 3
+	ErrGuideNotAnError ErrGuide = 0 // Indicates that the situation is not considered an error
+	ErrGuideRetry      ErrGuide = 1 // Suggests that the node should retry the operation
+	ErrGuideIgnore     ErrGuide = 2 // Suggests that the error should be ignored
+	ErrGuideFail       ErrGuide = 3 // Suggests that the node should fail the operation
 )
 
-// ErrorGuidance provides guidance on how a particular node
-// should manage errors. It is not required and default behavior on error
-// is to fail
+// ErrorGuidance provides an interface for customizing error handling behavior in a node.
+// Implementing this interface allows a node to decide how to manage errors, including
+// how many retries to allow and what action to take for a given error.
 type ErrorGuidance interface {
+	// Retries returns the number of times the node should attempt to retry after an error occurs.
 	Retries() int
+
+	// Action determines what action the node should take when encountering a specific error.
+	// The function returns an ErrGuide that directs the node to retry, ignore, fail, or treat the situation as not an error.
 	Action(err error) ErrGuide
 }

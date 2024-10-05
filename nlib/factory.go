@@ -2,6 +2,7 @@ package nlib
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/dshills/wiggle/llm"
 	"github.com/dshills/wiggle/node"
@@ -13,7 +14,11 @@ func GenerateAINodeFactory(lm llm.LLM, mgr node.StateManager, prefix string, opt
 	return func(count int) []node.Node {
 		nodes := []node.Node{}
 		for i := 0; i < count; i++ {
-			options.ID = fmt.Sprintf("%s-%s", prefix, GenerateUUID())
+			suffix, err := GenerateUUID()
+			if err != nil {
+				suffix = strconv.Itoa(i)
+			}
+			options.ID = fmt.Sprintf("%s-%s", prefix, suffix)
 			nodes = append(nodes, NewAINode(lm, mgr, options))
 		}
 		return nodes

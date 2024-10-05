@@ -1,188 +1,197 @@
 package nlib_test
 
-/*
-func TestEmptyNode_Init(t *testing.T) {
-	logger := &nmock.MockLogger{}
-	stateMgr := &nmock.MockStateManager{}
-	n := &nlib.EmptyNode{}
+import (
+	"context"
+	"errors"
+	"fmt"
+	"testing"
+	"time"
 
-	n.Init(logger, stateMgr, "test-node")
+	"github.com/dshills/wiggle/nlib"
+	"github.com/dshills/wiggle/nmock"
+	"github.com/dshills/wiggle/node"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+)
 
-	if n.ID() != "test-node" {
-		t.Errorf("expected n ID to be 'test-node', got '%s'", n.ID())
-	}
+const (
+	StatusSuccess   = "success"
+	StatusInProcess = "in-process"
+	StatusFail      = "fail"
+)
 
-	if n.Logger() != logger {
-		t.Errorf("expected logger to be set")
-	}
-
-	if n.StateManager() != stateMgr {
-		t.Errorf("expected state manager to be set")
+// Helper function to create a basic signal
+func createTestSignal(id string) node.Signal {
+	return node.Signal{
+		NodeID: id,
+		Status: StatusInProcess,
+		Meta:   []node.Meta{},
 	}
 }
 
-func TestEmptyNode_Close(t *testing.T) {
-	logger := &nmock.MockLogger{}
-	stateMgr := nmock.NewMockStateManager()
-	n := &nlib.EmptyNode{}
+func TestEmptyNode_SetID(t *testing.T) {
+	node := &nlib.EmptyNode{}
+	node.SetID("test-node")
+	assert.Equal(t, "test-node", node.ID())
+}
 
-	n.Init(logger, stateMgr, "test-node")
+func TestEmptyNode_Connect(t *testing.T) {
+	node := &nlib.EmptyNode{}
+	childNode1 := &nlib.EmptyNode{}
+	childNode2 := &nlib.EmptyNode{}
 
-	n.Close()
+	node.Connect(childNode1, childNode2)
 
-	select {
-	case <-n.DoneCh():
-		// Pass
-	default:
-		t.Errorf("expected done channel to be closed")
+	assert.Equal(t, 2, len(node.Nodes()))
+	assert.Equal(t, childNode1, node.Nodes()[0])
+	assert.Equal(t, childNode2, node.Nodes()[1])
+}
+
+func TestEmptyNode_PreProcessSignal_Success(t *testing.T) {
+	mockResMgr := new(nmock.MockResourceManager)
+	mockResMgr.On("RateLimit", mock.Anything).Return(nil)
+
+	mockStateMgr := new(nmock.MockStateManager)
+	mockStateMgr.On("ResourceManager").Return(mockResMgr)
+
+	node := &nlib.EmptyNode{}
+	node.SetStateManager(mockStateMgr)
+
+	signal := createTestSignal("test-node")
+	preProcessedSignal, err := node.PreProcessSignal(signal)
+
+	assert.NoError(t, err)
+	assert.Equal(t, "in-process", preProcessedSignal.Status)
+}
+
+func TestEmptyNode_PreProcessSignal_ExceedsRateLimit(t *testing.T) {
+	mockResMgr := new(nmock.MockResourceManager)
+	mockResMgr.On("RateLimit", mock.Anything).Return(errors.New("rate limit exceeded"))
+
+	mockStateMgr := new(nmock.MockStateManager)
+	mockStateMgr.On("ResourceManager").Return(mockResMgr)
+
+	node := &nlib.EmptyNode{}
+	node.SetStateManager(mockStateMgr)
+
+	signal := createTestSignal("test-node")
+	_, err := node.PreProcessSignal(signal)
+
+	assert.Error(t, err)
+	if err != nil {
+		assert.Equal(t, "exceeded rate limit, could not recover", err.Error())
 	}
+}
 
-	select {
-	case _, open := <-n.InputCh():
-		if open {
-			t.Errorf("expected input channel to be closed")
-		}
-	default:
-		t.Errorf("expected input channel to be closed")
-	}
+func TestEmptyNode_PostProcessSignal_Success(t *testing.T) {
+	mockStateMgr := new(nmock.MockStateManager)
+	mockStateMgr.On("UpdateState", mock.Anything).Return()
+
+	node := &nlib.EmptyNode{}
+	node.SetStateManager(mockStateMgr)
+
+	signal := createTestSignal("test-node")
+	postProcessedSignal, err := node.PostProcessSignal(signal)
+
+	assert.NoError(t, err)
+	assert.Equal(t, StatusInProcess, postProcessedSignal.Status)
+	mockStateMgr.AssertCalled(t, "UpdateState", signal)
 }
 
 func TestEmptyNode_SendToConnected_Success(t *testing.T) {
-	logger := &nmock.MockLogger{}
-	stateMgr := nmock.NewMockStateManager()
+	mockStateMgr := new(nmock.MockStateManager)
+	mockStateMgr.On("Log", mock.Anything).Return()
+
+	childNode := &nlib.EmptyNode{}
+	childNode.MakeInputCh()
+	childNode.SetStateManager(mockStateMgr)
+
 	n := &nlib.EmptyNode{}
-	n.Init(logger, stateMgr, "test-node")
-
-	mockNode := &nlib.EmptyNode{}
-	mockNode.Init(logger, stateMgr, "connected-node")
-	n.Connect(mockNode)
-
-	ctx := context.Background()
-	signal := node.Signal{NodeID: "test-node"}
-
-	err := n.SendToConnected(ctx, signal)
-	if err != nil {
-		t.Errorf("expected no error, got %v", err)
-	}
-
-	select {
-	case sig := <-mockNode.InputCh():
-		if sig.NodeID != "connected-node" {
-			t.Errorf("expected NodeID to be 'connected-node', got '%s'", sig.NodeID)
-		}
-	default:
-		t.Errorf("expected signal to be sent")
-	}
-}
-
-func TestEmptyNode_SendToConnected_Timeout(t *testing.T) {
-	logger := &nmock.MockLogger{}
-	stateMgr := nmock.NewMockStateManager()
-	n := &nlib.EmptyNode{}
-	n.Init(logger, stateMgr, "test-node")
-
-	mockNode := &nlib.EmptyNode{}
-	mockNode.Init(logger, stateMgr, "connected-node")
-	n.Connect(mockNode)
+	n.MakeInputCh()
+	n.SetStateManager(mockStateMgr)
+	n.Connect(childNode)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	signal := node.Signal{NodeID: "test-node"}
+	signal := createTestSignal("parent-node")
+	go func() {
+		<-childNode.InputCh()
+	}()
+
 	err := n.SendToConnected(ctx, signal)
-	if err == nil {
-		t.Errorf("expected timeout error, got nil")
-		return
-	}
-
-	if err.Error() != "context timeout or cancellation while sending signal to n connected-node: context deadline exceeded" {
-		t.Errorf("unexpected error message: %v", err)
-	}
+	assert.NoError(t, err)
 }
 
-func TestEmptyNode_Logger(t *testing.T) {
-	logger := &nmock.MockLogger{}
-	stateMgr := &nmock.MockStateManager{}
+func TestEmptyNode_SendToConnected_ContextTimeout(t *testing.T) {
+	mockStateMgr := new(nmock.MockStateManager)
+	mockStateMgr.On("Log", mock.Anything).Return()
+
+	childNode := &nlib.EmptyNode{}
+	childNode.MakeInputCh()
+	childNode.SetStateManager(mockStateMgr)
+
 	n := &nlib.EmptyNode{}
-	n.Init(logger, stateMgr, "test-node")
+	n.MakeInputCh()
+	n.SetStateManager(mockStateMgr)
+	n.Connect(childNode)
 
-	n.LogInfo("This is a test log")
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Millisecond)
+	defer cancel()
 
-	logEntries := logger.Entries()
-	if len(logEntries) != 1 {
-		t.Errorf("expected 1 log entry, got %d", len(logEntries))
-	}
+	signal := createTestSignal("parent-node")
+	err := n.SendToConnected(ctx, signal)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "context timeout or cancellation")
 }
 
-func TestEmptyNode_ValidateSignal(t *testing.T) {
-	logger := &nmock.MockLogger{}
-	stateMgr := &nmock.MockStateManager{}
+func TestEmptyNode_RunBeforeHook(t *testing.T) {
+	mockHooks := new(nmock.MockHooks)
+	signal := createTestSignal("test-node")
+	mockHooks.On("BeforeAction", signal).Return(signal, nil)
+
 	n := &nlib.EmptyNode{}
-	n.Init(logger, stateMgr, "test-node")
+	n.SetOptions(node.Options{Hooks: mockHooks})
 
-	// Test valid signal
-	validSignal := node.Signal{NodeID: "valid-node"}
-	if err := n.ValidateSignal(validSignal); err != nil {
-		t.Errorf("expected no error, got %v", err)
-	}
-
-	// Test invalid signal
-	invalidSignal := node.Signal{}
-	if err := n.ValidateSignal(invalidSignal); err == nil {
-		t.Errorf("expected error for invalid signal, got nil")
-	}
-
-	expectedError := "invalid signal missing ID"
-	if err := n.ValidateSignal(invalidSignal); err.Error() != expectedError {
-		t.Errorf("expected error '%s', got '%s'", expectedError, err.Error())
-	}
+	beforeSignal, err := n.RunBeforeHook(signal)
+	assert.NoError(t, err)
+	assert.Equal(t, signal, beforeSignal)
+	mockHooks.AssertCalled(t, "BeforeAction", signal)
 }
 
-func TestEmptyNode_PreProcessSignal(t *testing.T) {
-	logger := &nmock.MockLogger{}
-	stateMgr := &nmock.MockStateManager{}
+func TestEmptyNode_RunAfterHook(t *testing.T) {
+	mockHooks := new(nmock.MockHooks)
+	signal := createTestSignal("test-node")
+	mockHooks.On("AfterAction", signal).Return(signal, nil)
+
 	n := &nlib.EmptyNode{}
-	n.Init(logger, stateMgr, "test-node")
+	n.SetOptions(node.Options{Hooks: mockHooks})
 
-	// Test valid signal pre-processing
-	sig := node.Signal{NodeID: "test-node"}
-	processedSig, err := n.PreProcessSignal(sig)
-	if err != nil {
-		t.Errorf("expected no error, got %v", err)
-	}
-
-	if processedSig.NodeID != "test-node" {
-		t.Errorf("expected signal NodeID to remain 'test-node', got '%s'", processedSig.NodeID)
-	}
-
-	// Test invalid signal
-	invalidSig := node.Signal{}
-	_, err = n.PreProcessSignal(invalidSig)
-	if err == nil {
-		t.Errorf("expected error for invalid signal, got nil")
-	}
-
-	expectedError := "invalid signal missing ID"
-	if err != nil && err.Error() != expectedError {
-		t.Errorf("expected error '%s', got '%s'", expectedError, err.Error())
-	}
+	afterSignal, err := n.RunAfterHook(signal)
+	assert.NoError(t, err)
+	assert.Equal(t, signal, afterSignal)
+	mockHooks.AssertCalled(t, "AfterAction", signal)
 }
 
-func TestEmptyNode_ErrorGuidance(t *testing.T) {
+func TestEmptyNode_Fail(t *testing.T) {
+	mockStateMgr := new(nmock.MockStateManager)
+	mockStateMgr.On("UpdateState", mock.Anything).Return()
+	mockStateMgr.On("Complete").Return()
+	mockStateMgr.On("Log", mock.Anything).Return()
+
 	n := &nlib.EmptyNode{}
+	n.MakeInputCh()
+	n.SetStateManager(mockStateMgr)
 
-	// Test default behavior without setting error guidance
-	if n.ErrorAction(errors.New("test")) != node.ErrGuideFail {
-		t.Errorf("expected default error action to be ErrGuideFail")
-	}
+	signal := createTestSignal("test-node")
+	err := fmt.Errorf("test error")
+	n.Fail(signal, err)
 
-	// Mock error guidance and set it on the n
-	mockErrGuide := &nmock.MockErrorGuidance{RetryErr: nmock.ErrMockRetry}
-	n.SetErrorGuidance(mockErrGuide)
+	signal.Err = err.Error()
+	signal.Status = StatusFail
 
-	// Test error guidance action
-	if n.ErrorAction(nmock.ErrMockRetry) != node.ErrGuideRetry {
-		t.Errorf("expected error guidance to return ErrGuideRetry")
-	}
+	assert.Equal(t, StatusFail, signal.Status)
+	mockStateMgr.AssertCalled(t, "UpdateState", signal)
+	mockStateMgr.AssertCalled(t, "Complete")
 }
-*/

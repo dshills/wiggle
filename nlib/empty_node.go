@@ -58,7 +58,12 @@ func (n *EmptyNode) SetOptions(options node.Options) {
 	n.errGuide = options.ErrorGuidance
 	n.id = options.ID
 	if n.id == "" {
-		n.id = GenerateUUID()
+		var err error
+		n.id, err = GenerateUUID()
+		if err != nil {
+			n.LogErr(err)
+			n.id = "UUID-FAILED"
+		}
 	}
 }
 
@@ -85,6 +90,11 @@ func (n *EmptyNode) StateManager() node.StateManager {
 
 func (n *EmptyNode) MakeInputCh() {
 	n.inputCh = make(chan node.Signal)
+}
+
+// Return connected nodes
+func (n *EmptyNode) Nodes() []node.Node {
+	return n.nodes
 }
 
 // RunBeforeHook executes the before-action hooks for the signal

@@ -9,12 +9,12 @@ Written by GPT-4o
 Directed, modified, and tested by Davin Hills
 */
 
-type ListIndexesControlPlaneResponse struct {
+type ListIndexesResponse struct {
 	Indexes []string `json:"indexes"`
 }
 
-// ListIndexesControlPlane retrieves the list of all indexes from the control plane.
-func (pc *Client) ListIndexesControlPlane() (*ListIndexesControlPlaneResponse, error) {
+// ListIndexes retrieves the list of all indexes from the control plane.
+func (pc *Client) ListIndexes() (*ListIndexesResponse, error) {
 	urlStr := fmt.Sprintf("%s/databases", pc.controlPlaneURL)
 
 	res, err := pc.sendRequest("GET", urlStr, nil)
@@ -22,7 +22,7 @@ func (pc *Client) ListIndexesControlPlane() (*ListIndexesControlPlaneResponse, e
 		return nil, err
 	}
 
-	listResp, ok := res.(*ListIndexesControlPlaneResponse)
+	listResp, ok := res.(*ListIndexesResponse)
 	if !ok {
 		return nil, fmt.Errorf("unexpected response type")
 	}
@@ -39,7 +39,7 @@ type CreateIndexRequest struct {
 	Namespace string `json:"namespace,omitempty"`
 }
 
-func (pc *Client) CreateIndexControlPlane(index CreateIndexRequest) error {
+func (pc *Client) CreateIndex(index CreateIndexRequest) error {
 	urlStr := fmt.Sprintf("%s/databases", pc.controlPlaneURL)
 
 	_, err := pc.sendRequest("POST", urlStr, index)
@@ -64,8 +64,8 @@ type DescribeIndexResponse struct {
 	} `json:"status"`
 }
 
-// DescribeIndexControlPlane retrieves details about a specific index from the control plane.
-func (pc *Client) DescribeIndexControlPlane(indexName string) (*DescribeIndexResponse, error) {
+// DescribeIndex retrieves details about a specific index from the control plane.
+func (pc *Client) DescribeIndex(indexName string) (*DescribeIndexResponse, error) {
 	urlStr := fmt.Sprintf("%s/databases/%s", pc.controlPlaneURL, indexName)
 
 	res, err := pc.sendRequest("GET", urlStr, nil)
@@ -80,7 +80,7 @@ func (pc *Client) DescribeIndexControlPlane(indexName string) (*DescribeIndexRes
 	return describeResp, nil
 }
 
-func (pc *Client) DeleteIndexControlPlane(indexName string) error {
+func (pc *Client) DeleteIndex(indexName string) error {
 	urlStr := fmt.Sprintf("%s/databases/%s", pc.controlPlaneURL, indexName)
 
 	_, err := pc.sendRequest("DELETE", urlStr, nil)
@@ -98,8 +98,8 @@ type ConfigureIndexRequest struct {
 	PodType  string `json:"pod_type,omitempty"`
 }
 
-// ConfigureIndexControlPlane modifies the configuration of an index in the Pinecone project.
-func (pc *Client) ConfigureIndexControlPlane(indexName string, config ConfigureIndexRequest) error {
+// ConfigureIndex modifies the configuration of an index in the Pinecone project.
+func (pc *Client) ConfigureIndex(indexName string, config ConfigureIndexRequest) error {
 	urlStr := fmt.Sprintf("%s/databases/%s", pc.controlPlaneURL, indexName)
 
 	_, err := pc.sendRequest("PATCH", urlStr, config)
@@ -116,8 +116,8 @@ type ListCollectionsResponse struct {
 	Collections []string `json:"collections"`
 }
 
-// ListCollectionsControlPlane retrieves the list of all collections in the Pinecone project.
-func (pc *Client) ListCollectionsControlPlane() (*ListCollectionsResponse, error) {
+// ListCollections retrieves the list of all collections in the Pinecone project.
+func (pc *Client) ListCollections() (*ListCollectionsResponse, error) {
 	urlStr := fmt.Sprintf("%s/collections", pc.controlPlaneURL)
 
 	res, err := pc.sendRequest("GET", urlStr, nil)
@@ -138,8 +138,8 @@ type CreateCollectionRequest struct {
 	Source string `json:"source"`
 }
 
-// CreateCollectionControlPlane creates a new collection in the Pinecone project.
-func (pc *Client) CreateCollectionControlPlane(collection CreateCollectionRequest) error {
+// CreateCollection creates a new collection in the Pinecone project.
+func (pc *Client) CreateCollection(collection CreateCollectionRequest) error {
 	urlStr := fmt.Sprintf("%s/collections", pc.controlPlaneURL)
 
 	_, err := pc.sendRequest("POST", urlStr, collection)
@@ -163,8 +163,8 @@ type DescribeCollectionResponse struct {
 	Created string `json:"created"`
 }
 
-// DescribeCollectionControlPlane retrieves details about a specific collection from the control plane.
-func (pc *Client) DescribeCollectionControlPlane(collectionName string) (*DescribeCollectionResponse, error) {
+// DescribeCollection retrieves details about a specific collection from the control plane.
+func (pc *Client) DescribeCollection(collectionName string) (*DescribeCollectionResponse, error) {
 	urlStr := fmt.Sprintf("%s/collections/%s", pc.controlPlaneURL, collectionName)
 
 	res, err := pc.sendRequest("GET", urlStr, nil)
@@ -179,8 +179,8 @@ func (pc *Client) DescribeCollectionControlPlane(collectionName string) (*Descri
 	return describeResp, nil
 }
 
-// DeleteCollectionControlPlane deletes a specific collection from the Pinecone project.
-func (pc *Client) DeleteCollectionControlPlane(collectionName string) error {
+// DeleteCollection deletes a specific collection from the Pinecone project.
+func (pc *Client) DeleteCollection(collectionName string) error {
 	urlStr := fmt.Sprintf("%s/collections/%s", pc.controlPlaneURL, collectionName)
 
 	_, err := pc.sendRequest("DELETE", urlStr, nil)
