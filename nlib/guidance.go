@@ -32,19 +32,10 @@ func NewSimpleGuidance() *SimpleGuidance {
 // It retrieves additional context from the signal, if available, and includes that in the prompt.
 // If no context is found, the prompt is generated without it. The generated prompt is assigned
 // to the signal's Task and returned for further processing.
-func (g *SimpleGuidance) Generate(sig node.Signal) (node.Signal, error) {
-	// Try to get the context associated with the signal's node ID
-	con, err := sig.Context.GetContext(sig.NodeID)
-	if err != nil {
-		// If no context is available, create the prompt with just the task and metadata
-		prompt := g.prompt(sig.Task.String(), "")
-		sig.Task = NewStringData(prompt)
-		return sig, nil
-	}
-
+func (g *SimpleGuidance) Generate(sig node.Signal, context string) (node.Signal, error) {
 	// Generate a prompt using both the signal's task and the retrieved context
-	prompt := g.prompt(sig.Task.String(), con.String())
-	sig.Task = NewStringData(prompt)
+	prompt := g.prompt(sig.Task.String(), context)
+	sig.Task = &Carrier{TextData: prompt}
 	return sig, nil
 }
 

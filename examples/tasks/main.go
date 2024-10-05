@@ -56,7 +56,12 @@ func main() {
 	taskNode.Connect(jsonNode)
 	jsonNode.Connect(outNode)
 
-	taskNode.InputCh() <- nlib.NewDefaultSignal(taskNode, "Write a complete rope algorithm package. Include methods for using a character index as well as line and column values")
+	sig := node.Signal{
+		NodeID: taskNode.ID(),
+		Task:   &nlib.Carrier{TextData: "Write a complete rope algorithm package. Include methods for using a character index as well as line and column values"},
+	}
+
+	taskNode.InputCh() <- sig
 
 	stateMgr.WaitFor(outNode)
 }

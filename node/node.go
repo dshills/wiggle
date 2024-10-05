@@ -128,7 +128,7 @@ type Hooks interface {
 type Guidance interface {
 	// Generate processes the input signal, taking into account its data, context,
 	// and metadata, and returns a modified Signal with the guidance for further steps.
-	Generate(signal Signal) (Signal, error)
+	Generate(signal Signal, context string) (Signal, error)
 }
 
 // ErrGuide defines an integer type used for guiding error handling actions within a node.

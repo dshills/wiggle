@@ -107,10 +107,10 @@ func (n *SimplePartitionerNode) processSignal(sig node.Signal) {
 
 	// Send each partitioned task to a separate node for processing
 	for i, task := range parts {
-		newSig := SignalFromSignal(sig, NewStringData(task)) // Create a new signal for each partition
-		newSig.NodeID = nodes[i].ID()                        // Assign the node ID to the signal
-		nodes[i].Connect(emptyNode)                          // Connect the node to the empty node
-		nodes[i].InputCh() <- newSig                         // Send the signal to the node
+		newSig := NewSignalFromSignal(nodes[i].ID(), sig)
+		newSig.Task = &Carrier{TextData: task}
+		nodes[i].Connect(emptyNode)  // Connect the node to the empty node
+		nodes[i].InputCh() <- newSig // Send the signal to the node
 	}
 
 	// Collect the results from the nodes
@@ -128,8 +128,8 @@ func (n *SimplePartitionerNode) processSignal(sig node.Signal) {
 		return
 	}
 
-	sig.Result = NewStringData(response) // Set the final integrated result in the signal
-	sig.Status = StatusSuccess           // Mark signal as successful
+	sig.Result = &Carrier{TextData: response}
+	sig.Status = StatusSuccess
 
 	// Post-process the signal
 	sig, err = n.PostProcessSignal(sig)

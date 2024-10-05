@@ -70,12 +70,10 @@ func (n *SimpleLoopNode) processSignal(sig node.Signal) {
 
 	// Check if the condition is met (if condFn is not nil).
 	if n.condFn == nil || !n.condFn(sig) {
-		// If the condition is not met, send the signal back to the start node.
 		if n.startNode != nil {
-			sig = PrepareSignalForNext(sig)
-			sig.NodeID = n.startNode.ID()
 			n.LogInfo(fmt.Sprintf("Sending to %s", n.startNode.ID()))
-			n.startNode.InputCh() <- sig // Send the signal back to the start node.
+			newSig := NewSignalFromSignal(n.startNode.ID(), sig)
+			n.startNode.InputCh() <- newSig
 		}
 	}
 	sig.Status = StatusSuccess

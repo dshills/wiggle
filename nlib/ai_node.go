@@ -66,7 +66,14 @@ func (n *AINode) processSignal(sig node.Signal) {
 
 	// Optionally generate guidance (modify the signal) before sending to the LLM
 	if guide := n.Guidance(); guide != nil {
-		sig, err = guide.Generate(sig)
+		context := ""
+		if ctxmgr := n.stateMgr.ContextManager(); ctxmgr != nil {
+			data, err := ctxmgr.GetContext(n.ID())
+			if err == nil && data != nil {
+				context = data.String()
+			}
+		}
+		sig, err = guide.Generate(sig, context)
 		if err != nil {
 			n.LogErr(err) // Log error in guidance generation
 		}
@@ -114,7 +121,7 @@ func (n *AINode) CallLLM(ctx context.Context, sig node.Signal) (node.Signal, err
 	}
 
 	// Set the LLM's response as the result in the signal
-	sig.Result = NewStringData(msg.Content)
+	sig.Result = &Carrier{TextData: msg.Content}
 
 	return sig, nil // Return the signal with the LLM's response
 }

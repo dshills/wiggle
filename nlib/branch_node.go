@@ -73,12 +73,10 @@ func (n *SimpleBranchNode) processSignal(sig node.Signal) {
 
 	// Iterate over the conditions to find a match.
 	for _, cond := range n.conditions {
-		// If the condition function evaluates to true, send the signal to the target node.
 		if cond.condFn(sig) {
-			sig = PrepareSignalForNext(sig)
-			n.LogInfo(fmt.Sprintf("Sending to %s", cond.target.ID())) // Log the routing action.
-			sig.NodeID = cond.target.ID()
-			cond.target.InputCh() <- sig // Send the signal to the target node.
+			n.LogInfo(fmt.Sprintf("Sending to %s", cond.target.ID()))
+			newSig := NewSignalFromSignal(cond.target.ID(), sig)
+			cond.target.InputCh() <- newSig
 			return
 		}
 	}

@@ -33,8 +33,13 @@ func main() {
 	// Connect
 	firstNode.Connect(outNode)
 
+	sig := node.Signal{
+		NodeID: firstNode.ID(),
+		Task:   &nlib.Carrier{TextData: "Why is the sky blue?"},
+	}
+
 	// Send it
-	firstNode.InputCh() <- nlib.NewDefaultSignal(firstNode, "Why is the sky blue?")
+	firstNode.InputCh() <- sig
 
 	// Wait for the output node to print the result
 	stateMgr.WaitFor(outNode)

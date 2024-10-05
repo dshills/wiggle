@@ -41,7 +41,7 @@ func main() {
 	firstNode.Connect(outNode)
 	outNode.Connect(inputNode)
 
-	signal := nlib.NewDefaultSignal(inputNode, "")
+	signal := node.Signal{NodeID: inputNode.ID()}
 	// Send it
 	inputNode.InputCh() <- signal
 
@@ -49,7 +49,7 @@ func main() {
 	stateMgr.WaitFor(nil)
 
 	// Print the history
-	for _, hx := range signal.History.GetHistory() {
+	for _, hx := range stateMgr.GetHistory() {
 		fmt.Println(nlib.SignalToLog(hx))
 	}
 }

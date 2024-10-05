@@ -174,14 +174,12 @@ func (n *EmptyNode) PostProcessSignal(sig node.Signal) (node.Signal, error) {
 
 // SendToConnected sends a signal to all connected nodes using the provided context for timeout control
 func (n *EmptyNode) SendToConnected(ctx context.Context, sig node.Signal) error {
-	sig = PrepareSignalForNext(sig)
-
 	n.mu.RLock()
 	defer n.mu.RUnlock()
 
 	for _, conNode := range n.nodes {
 		n.LogInfo(fmt.Sprintf("Sending to %s", conNode.ID()))
-		sig.NodeID = conNode.ID()
+		newSig := NewSignalFromSignal(conNode.ID(), sig)
 
 		select {
 		case <-ctx.Done():
@@ -189,7 +187,7 @@ func (n *EmptyNode) SendToConnected(ctx context.Context, sig node.Signal) error 
 			err := fmt.Errorf("context timeout or cancellation while sending signal to node %s: %v", conNode.ID(), ctx.Err())
 			n.LogErr(err)
 			return err
-		case conNode.InputCh() <- sig:
+		case conNode.InputCh() <- newSig:
 		}
 	}
 	return nil

@@ -33,12 +33,12 @@ func (hx *SimpleHistoryManager) GetHistory() []node.Signal {
 
 // GetHistoryByID returns the signals that match the provided Node ID.
 // It filters through the history and collects signals with the specified ID.
-func (hx *SimpleHistoryManager) GetHistoryByID(id string) ([]node.Signal, error) {
+func (hx *SimpleHistoryManager) Filter(nodeid string) []node.Signal {
 	sigList := []node.Signal{}
-	for _, sig := range hx.signals { // Iterate through stored signals
-		if sig.NodeID == id { // Check if the signal's NodeID matches the provided ID
-			sigList = append(sigList, sig) // If matched, add to the list
+	for _, sig := range hx.signals {
+		if sig.NodeID == nodeid {
+			sigList = append(sigList, sig)
 		}
 	}
-	return sigList, nil // Return the filtered list of signals
+	return sigList
 }

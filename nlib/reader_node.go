@@ -63,7 +63,7 @@ func (n *SimpleStringReaderNode) processSignal(sig node.Signal) {
 		sig.Err = err.Error()
 		return
 	}
-	sig.Result = NewStringData(string(byts))
+	sig.Result = &Carrier{TextData: string(byts)}
 
 	sig.Status = StatusSuccess
 

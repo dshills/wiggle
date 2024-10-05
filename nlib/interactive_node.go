@@ -73,7 +73,7 @@ func (n *InteractiveNode) processSignal(sig node.Signal) {
 	}
 
 	// Set the user's input as the signal's response data.
-	sig.Result = NewStringData(query)
+	sig.Result = &Carrier{TextData: query}
 
 	sig.Status = StatusSuccess
 	// Run post-processing hooks and forward the signal to connected nodes.
