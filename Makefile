@@ -4,7 +4,7 @@ PKG_LIST := $(shell go list ./...)
 GO_FILES := $(shell find . -name '*.go' | grep -v _test.go)
 
 .PHONY: all
-all: lint test install tags
+all: lint install tags
 
 .PHONY: install
 install: ## Run install

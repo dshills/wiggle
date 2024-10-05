@@ -20,9 +20,11 @@ type OutputStringNode struct {
 
 // NewOutputStringNode creates a new OutputStringNode with the specified writer, logger, state manager, and name.
 // It starts a goroutine to listen for incoming signals and write their data to the writer.
-func NewOutputStringNode(w io.Writer, l node.Logger, sm node.StateManager, name string) *OutputStringNode {
-	n := OutputStringNode{writer: w} // Initialize with the provided writer.
-	n.Init(l, sm, name)              // Initialize the node with logger, state manager, and name.
+func NewOutputStringNode(w io.Writer, mgr node.StateManager, options node.Options) *OutputStringNode {
+	n := OutputStringNode{writer: w}
+	n.SetOptions(options)
+	n.SetStateManager(mgr)
+	n.MakeInputCh()
 
 	// Goroutine to listen for incoming signals and process them.
 	go func() {
@@ -30,6 +32,7 @@ func NewOutputStringNode(w io.Writer, l node.Logger, sm node.StateManager, name 
 		for {
 			select {
 			case sig := <-n.InputCh(): // Receive a signal from the input channel.
+				n.LogInfo("Received Signal")
 				sig, err = n.PreProcessSignal(sig)
 				if err != nil {
 					n.Fail(sig, err)
@@ -61,7 +64,7 @@ func NewOutputStringNode(w io.Writer, l node.Logger, sm node.StateManager, name 
 					return
 				}
 
-			case <-n.DoneCh(): // If the done channel is closed, exit the loop.
+			case <-n.StateManager().Register():
 				n.LogInfo("Received done")
 				return
 			}

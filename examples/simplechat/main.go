@@ -7,6 +7,7 @@ import (
 
 	"github.com/dshills/wiggle/llm/openai"
 	"github.com/dshills/wiggle/nlib"
+	"github.com/dshills/wiggle/node"
 )
 
 const envURL = "OPENAI_API_URL"
@@ -22,15 +23,21 @@ func main() {
 
 	// Create State Manager
 	stateMgr := nlib.NewSimpleStateManager(logger)
+	stateMgr.SetLogger(logger)
 
 	// Define output writer
 	writer := os.Stdout
 
 	// Create Nodes
-	inputNode := nlib.NewInteractiveNode(logger, stateMgr, "Input Node")
-	firstNode := nlib.NewAINode(lm, logger, stateMgr, "AI Node")
+	options := node.Options{ID: "Input-Node"}
+	inputNode := nlib.NewInteractiveNode(stateMgr, options)
+	options = node.Options{ID: "AI-Node"}
+	firstNode := nlib.NewAINode(lm, stateMgr, options)
+	options = node.Options{ID: "Output-Node"}
+	outNode := nlib.NewOutputStringNode(writer, stateMgr, options)
+
+	// Connections
 	inputNode.Connect(firstNode)
-	outNode := nlib.NewOutputStringNode(writer, logger, stateMgr, "Output Node")
 	firstNode.Connect(outNode)
 	outNode.Connect(inputNode)
 

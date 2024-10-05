@@ -8,27 +8,15 @@ import "github.com/dshills/wiggle/schema"
 // allowing each node to modify, route, and act on the data while keeping track of its
 // progression throughout the workflow.
 type Signal struct {
+	Context ContextManager
+	Err     string
+	History HistoryManager
+	Meta    []Meta
 	NodeID  string
-	Task    DataCarrier
 	Result  DataCarrier
 	Schema  schema.Schema
-	Meta    []Meta
-	Err     string
 	Status  string
-	Context ContextManager
-	History HistoryManager
-}
-
-func (s *Signal) AddContext(forID string, data DataCarrier) {
-	if s.Context != nil {
-		s.Context.SetContext(forID, data)
-	}
-}
-
-func (s *Signal) AddHistory() {
-	if s.History != nil {
-		s.History.AddHistory(*s)
-	}
+	Task    DataCarrier
 }
 
 // Meta represents key-value pairs of metadata associated with a signal.
@@ -39,4 +27,36 @@ func (s *Signal) AddHistory() {
 type Meta struct {
 	Key   string
 	Value string
+}
+
+// ContextManager is responsible for managing the contextual information
+// passed between nodes during execution. It provides methods to update
+// and retrieve context from signals, ensuring that relevant data is available
+// and consistent as it flows through the node chain. This interface helps
+// maintain continuity and relevance in processing workflows.
+type ContextManager interface {
+	GetContext(key string) (DataCarrier, error)
+	RemoveContext(key string)
+	SetContext(key string, data DataCarrier)
+}
+
+// HistoryManager is responsible for managing the history of signals as they pass
+// through nodes. It provides methods to add entries, retrieve, and optionally
+// compress or truncate the history, allowing nodes to track the progression of
+// a signal and maintain a record of its transformations throughout the workflow.
+type HistoryManager interface {
+	AddHistory(Signal)                          // Adds a new entry to history
+	CompressHistory() error                     // Compress or truncate history
+	GetHistory() []Signal                       // Retrieve full history
+	GetHistoryByID(id string) ([]Signal, error) // Get specific history
+}
+
+// DataCarrier provides an abstraction for handling different types of data
+// within a signal. It allows for conversion of the data into various formats,
+// such as string, JSON, or vectors, ensuring flexibility in how data
+// is passed between nodes and processed in different stages of the workflow.
+type DataCarrier interface {
+	JSON() []byte
+	String() string
+	Vector() []float32
 }

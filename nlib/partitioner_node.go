@@ -18,20 +18,23 @@ type SimplePartitionerNode struct {
 	factory         node.Factory
 }
 
-func NewSimplePartitionerNode(pfn node.PartitionerFn, ifn node.IntegratorFn, fac node.Factory, l node.Logger, sm node.StateManager, name string) *SimplePartitionerNode {
+func NewSimplePartitionerNode(pfn node.PartitionerFn, ifn node.IntegratorFn, fac node.Factory, mgr node.StateManager, options node.Options) *SimplePartitionerNode {
 	n := SimplePartitionerNode{
 		partitionFunc:   pfn,
 		integrationFunc: ifn,
 		factory:         fac,
 	}
-	n.Init(l, sm, name)
+	n.SetOptions(options)
+	n.SetStateManager(mgr)
+	n.MakeInputCh()
 
 	go func() {
 		for {
 			select {
 			case sig := <-n.InputCh():
+				n.LogInfo("Received Signal")
 				n.processSignal(sig)
-			case <-n.DoneCh():
+			case <-n.StateManager().Register():
 				n.LogInfo("Received Done")
 				return
 			}
@@ -79,7 +82,7 @@ func (n *SimplePartitionerNode) processSignal(sig node.Signal) {
 	// Create a set of Nodes to handle the partitioned data
 	nodes := n.factory(len(parts))
 	respChan := make(chan node.Signal, len(parts))
-	emptyNode := &EmptyNode{inCh: respChan}
+	emptyNode := &EmptyNode{inputCh: respChan}
 	for i, task := range parts {
 		newSig := SignalFromSignal(sig, NewStringData(task))
 		newSig.NodeID = nodes[i].ID()

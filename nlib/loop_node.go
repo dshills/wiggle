@@ -26,17 +26,20 @@ type SimpleLoopNode struct {
 // - l: Logger for logging messages.
 // - sm: StateManager for managing node state.
 // - name: Name/ID of the node.
-func NewSimpleLoopNode(start node.Node, condFn node.ConditionFn, l node.Logger, sm node.StateManager, name string) *SimpleLoopNode {
+func NewSimpleLoopNode(start node.Node, condFn node.ConditionFn, mgr node.StateManager, options node.Options) *SimpleLoopNode {
 	n := SimpleLoopNode{startNode: start, condFn: condFn}
-	n.Init(l, sm, name) // Initialize the node with logger, state manager, and name.
+	n.SetOptions(options)
+	n.SetStateManager(mgr)
+	n.MakeInputCh()
 
 	// Goroutine to listen for incoming signals and process them.
 	go func() {
 		for {
 			select {
-			case sig := <-n.InputCh(): // Process signal when received.
+			case sig := <-n.InputCh():
+				n.LogInfo("Received signal")
 				n.processSignal(sig)
-			case <-n.DoneCh(): // Exit loop when done.
+			case <-n.StateManager().Register():
 				n.LogInfo("Received Done")
 				return
 			}

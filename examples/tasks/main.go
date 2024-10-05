@@ -6,6 +6,7 @@ import (
 
 	"github.com/dshills/wiggle/llm/openai"
 	"github.com/dshills/wiggle/nlib"
+	"github.com/dshills/wiggle/node"
 )
 
 const envURL = "OPENAI_API_URL"
@@ -32,8 +33,7 @@ func main() {
 		Tone:           "professional software engineer",
 	}
 
-	taskNode := nlib.NewAINode(lm, logger, stateMgr, "Task Node")
-	taskNode.SetGuidance(&guide)
+	taskNode := nlib.NewAINode(lm, stateMgr, node.Options{ID: "Task Node", Guidance: &guide})
 
 	guide = nlib.SimpleGuidance{
 		Role:           "You are an expert JSON constructor. You never write code",
@@ -49,12 +49,11 @@ func main() {
 		Tone: "professional software engineer",
 	}
 
-	jsonNode := nlib.NewAINode(lm, logger, stateMgr, "JSON Node")
-	jsonNode.SetGuidance(&guide)
+	jsonNode := nlib.NewAINode(lm, stateMgr, node.Options{ID: "JSON Node", Guidance: &guide})
+	outNode := nlib.NewOutputStringNode(writer, stateMgr, node.Options{ID: "Output Node"})
 
+	// Connect
 	taskNode.Connect(jsonNode)
-
-	outNode := nlib.NewOutputStringNode(writer, nil, stateMgr, "Output Node")
 	jsonNode.Connect(outNode)
 
 	taskNode.InputCh() <- nlib.NewDefaultSignal(taskNode, "Write a complete rope algorithm package. Include methods for using a character index as well as line and column values")

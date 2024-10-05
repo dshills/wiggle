@@ -28,17 +28,20 @@ type SimpleBranchNode struct {
 
 // NewSimpleBranchNode creates a new SimpleBranchNode with the given logger, state manager, and name.
 // It initializes the node and starts a goroutine to listen for incoming signals.
-func NewSimpleBranchNode(l node.Logger, sm node.StateManager, name string) *SimpleBranchNode {
+func NewSimpleBranchNode(mgr node.StateManager, options node.Options) *SimpleBranchNode {
 	n := SimpleBranchNode{}
-	n.Init(l, sm, name) // Initialize the node with logger, state manager, and name.
+	n.SetOptions(options)
+	n.SetStateManager(mgr)
+	n.MakeInputCh()
 
 	// Goroutine to listen for incoming signals and process them.
 	go func() {
 		for {
 			select {
-			case sig := <-n.inCh: // Receive a signal from the input channel.
-				n.processSignal(sig) // Process the signal.
-			case <-n.DoneCh(): // If the done channel is closed, exit the loop.
+			case sig := <-n.InputCh():
+				n.LogInfo("Received Signal")
+				n.processSignal(sig)
+			case <-n.StateManager().Register():
 				n.LogInfo("Received Done")
 				return
 			}

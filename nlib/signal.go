@@ -38,7 +38,9 @@ func NewSignal(id string, cm node.ContextManager, hx node.HistoryManager, task n
 // It will store the history of the current Node
 // swap the Result into the Task
 func PrepareSignalForNext(sig node.Signal) node.Signal {
-	sig.AddHistory()
+	if sig.History != nil {
+		sig.History.AddHistory(sig)
+	}
 	sig.Task = sig.Result
 	sig.Result = nil
 	return sig

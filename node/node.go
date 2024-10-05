@@ -13,13 +13,16 @@ type Node interface {
 	Connect(...Node)
 	ID() string
 	InputCh() chan Signal
-	SetErrorGuidance(ErrorGuidance)
-	SetGuidance(Guidance)
-	SetHooks(Hooks)
 	SetID(string)
-	SetLogger(Logger)
-	SetResourceManager(ResourceManager)
+	SetOptions(Options)
 	SetStateManager(StateManager)
+}
+
+type Options struct {
+	ID            string
+	Hooks         Hooks
+	Guidance      Guidance
+	ErrorGuidance ErrorGuidance
 }
 
 // PartitionerFn is a function type that takes an input string and splits it
@@ -100,4 +103,44 @@ type SetNode interface {
 	SetStartNode(Node)
 	SetFinalNode(Node)
 	SetCoordinator(Coordinator)
+}
+
+// HookFn is used to transform Signals. It is used with the Hooks interface
+type HookFn func(Signal) (Signal, error)
+
+// Hooks provides lifecycle hooks that allow custom logic to be executed
+// before and after a node processes a signal. The interface allows for
+// pre-processing, such as input validation or logging, and post-processing,
+// such as result modification or cleanup, giving more control over the
+// execution flow in a chain of nodes.
+type Hooks interface {
+	BeforeAction(Signal) (Signal, error)
+	AfterAction(Signal) (Signal, error)
+}
+
+// Guidance provides a mechanism to generate structured guidance or instructions
+// for processing signals within the node chain. It interprets the input data,
+// contextual information, and metadata to formulate a message or set of instructions
+// that can guide further processing by LLMs or other nodes in the workflow.
+type Guidance interface {
+	// Generate processes the input signal, taking into account its data, context,
+	// and metadata, and returns a modified Signal with the guidance for further steps.
+	Generate(signal Signal) (Signal, error)
+}
+
+type ErrGuide int
+
+const (
+	ErrGuideNotAnError ErrGuide = 0
+	ErrGuideRetry      ErrGuide = 1
+	ErrGuideIgnore     ErrGuide = 2
+	ErrGuideFail       ErrGuide = 3
+)
+
+// ErrorGuidance provides guidance on how a particular node
+// should manage errors. It is not required and default behavior on error
+// is to fail
+type ErrorGuidance interface {
+	Retries() int
+	Action(err error) ErrGuide
 }

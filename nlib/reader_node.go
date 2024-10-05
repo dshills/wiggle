@@ -16,16 +16,19 @@ type SimpleStringReaderNode struct {
 	reader io.Reader
 }
 
-func NewSimpleStringReaderNode(r io.Reader, l node.Logger, sm node.StateManager, name string) *SimpleStringReaderNode {
+func NewSimpleStringReaderNode(r io.Reader, mgr node.StateManager, options node.Options) *SimpleStringReaderNode {
 	n := SimpleStringReaderNode{reader: r}
-	n.Init(l, sm, name)
+	n.SetOptions(options)
+	n.SetStateManager(mgr)
+	n.MakeInputCh()
 
 	go func() {
 		for {
 			select {
 			case sig := <-n.InputCh():
+				n.LogInfo("Received Signal")
 				n.processSignal(sig)
-			case <-n.DoneCh():
+			case <-n.StateManager().Register():
 				n.LogInfo("Received Done")
 				return
 			}

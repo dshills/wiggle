@@ -20,23 +20,26 @@ type AINode struct {
 
 // NewAINode creates a new AINode, initializing the LLM, logger, and state manager,
 // and sets up the node to listen for incoming signals asynchronously.
-func NewAINode(lm llm.LLM, l node.Logger, sm node.StateManager, name string) node.Node {
-	ai := AINode{lm: lm} // Initialize the AINode with the provided LLM
-	ai.Init(l, sm, name)
+func NewAINode(lm llm.LLM, sm node.StateManager, options node.Options) node.Node {
+	n := AINode{lm: lm} // Initialize the AINode with the provided LLM
+	n.SetOptions(options)
+	n.SetStateManager(sm)
+	n.MakeInputCh()
 
 	go func() {
 		for {
 			select {
-			case sig := <-ai.InputCh():
-				ai.processSignal(sig)
-			case <-ai.DoneCh():
-				ai.LogInfo("Received Done")
+			case sig := <-n.InputCh():
+				n.LogInfo("Received Signal")
+				n.processSignal(sig)
+			case <-n.StateManager().Register():
+				n.LogInfo("Received Done")
 				return
 			}
 		}
 	}()
 
-	return &ai
+	return &n
 }
 
 // listen listens for incoming signals on the input channel and processes them.
@@ -46,19 +49,22 @@ func (n *AINode) processSignal(sig node.Signal) {
 	var ctx = context.TODO() // Initialize a context for managing requests
 	sig, err = n.PreProcessSignal(sig)
 	if err != nil {
-		n.Fail(sig, err)
+		n.LogErr(err)
+		n.StateManager().Complete()
 		return
 	}
 
 	sig.Status = StatusInProcess
 
 	// Generate guidance (possibly modify the signal) before sending it to the LLM
-	sig, err = n.GenGuidance(sig)
-	if err != nil {
-		n.Fail(sig, err)
+	if guide := n.Guidance(); guide != nil {
+		sig, err = guide.Generate(sig)
+		if err != nil {
+			n.LogErr(err)
+		}
 	}
 
-	n.LogInfo("Sending to llm") // Log the data being sent to the LLM
+	n.LogInfo(fmt.Sprintf("Sending to llm %s", n.lm.Model())) // Log the data being sent to the LLM
 
 	// Call the LLM to process the signal
 	sig, err = n.CallLLM(ctx, sig)
@@ -78,7 +84,7 @@ func (n *AINode) processSignal(sig node.Signal) {
 		n.Fail(sig, err)
 		return
 	}
-	n.LogInfo(fmt.Sprintf("Completed in %v", time.Since(start)))
+	n.LogInfo(fmt.Sprintf("%v completed in %v", n.lm.Model(), time.Since(start)))
 }
 
 // callLLM sends the signal's data to the LLM for processing and returns the modified signal.
