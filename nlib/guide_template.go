@@ -13,6 +13,7 @@ type BasicTemplateData struct {
 	Tone           string
 	Context        string
 	Input          string
+	Schema         string
 }
 
 // AddFn is used by the BasicTemplate to make a numbered list
@@ -57,6 +58,13 @@ const BasicTemplate = `
 <output format>
 	{{ .OutputFormat }}
 </output format>
+{{end}}
+
+{{if .Schema}}
+Please provide the output in the following JSON format. Ensure that all fields follow the structure and types as specified in the schema below. If certain fields are optional, you can exclude them if necessary. The schema is as follows:
+<json schema>
+	{{ .Schema }}
+</json schema>
 {{end}}
 
 {{if .Tone}}
