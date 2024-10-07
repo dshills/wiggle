@@ -13,11 +13,6 @@ type State struct {
 // the current state, ensuring that each node can access the relevant status
 // information. This interface helps maintain workflow consistency and manage
 // state transitions across complex processes.
-// Defines how state and errors are managed during node execution. It provides
-// a mechanism to handle errors encountered in a node's processing logic and
-// determines whether the workflow should continue or halt based on the nature
-// of the error. This interface helps to create robust error management strategies
-// across a chain of nodes.
 type StateManager interface {
 	GetState(Signal) State
 	UpdateState(Signal)

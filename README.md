@@ -2,53 +2,21 @@
 
 ![logo](./logo/wiggle_logo_256x256.png)
 
-## Oct 4, 2024: Heavy development period. This README will be out of date for a bit
+Wiggle provides a flexible and modular library for chaining multiple Language Learning Models (LLMs), integrating context from various sources like vector databases, and efficiently processing large or complex data by partitioning tasks across nodes and integrating results. The framework is designed to support both large models (e.g., GPT-4) and smaller models (e.g., LLaMA 3.1), ensuring scalability, modularity, and efficiency.
 
-This Go project provides a flexible and modular framework for chaining multiple Language Learning Models (LLMs), integrating context from various sources like vector databases, and efficiently processing large or complex data by partitioning tasks across nodes and integrating results. The framework is designed to support both large models (e.g., GPT-4) and smaller models (e.g., LLaMA 3.1), ensuring scalability, modularity, and efficiency.
-
-Table of Contents
-
-- [Overview](#overview)
-- [Features](#Features)
-- [Architecture](#Architecture)
-- [Getting Started](#Getting-Started)
-- [Installation](#Installation)
-- [Basic Example](#Basic-Example)
-- [Core Concepts](#Core-Concepts)
-- [Signal](#Signal)
-- [Node](#Node)
-- [Partitioner Node](#Partitioner-Node)
-- [Integrator Node](#Integrator-Node)
-- [Loop Node](#Loop-Node)
-- [Branch Node](#Branch-Node)
-- [Ouput Node](#Output-Node)
-- [Input Node](#Input-Node)
-- [Set Node](#Set-Node)
-- [State Manager](#State-Manager)
-- [Guidance](#Guidance)
-- [Hooks](#Hooks)
-- [Coordinator](#Coordinator)
-- [Resource Management](#Resource-Management)
-- [Context Management](#Context-Management)
-- [Data Carrier](#Data-Carrier)
-- [Example Workflow](#Example-Workflow)
-- [Contributing](#Contributing)
-- [License](#license)
-
-## Overview
-
-This framework is built around Nodes that can process data, transform it, or query external systems (such as LLMs). It supports partitioning data into manageable tasks and then integrating the results, providing a robust mechanism to handle both simple and complex workflows. The system is highly extensible and can integrate large LLMs like GPT-4, as well as smaller models like LLaMA.
+Wiggle tries to be a good Go citizen. It is a library more than a framework despite being called a framework. It has batteries but does not require they are used. The core of Wiggle is a set of defined interfaces. Entire applications can be written by simple using the interfaces to define your Node structure. However, most all of the Node and supporting types have implementations available in the nlib directory. Depending on the task being worked on a mix of predefined structures and domain specific ones generally works best.
 
 ## Features
 
-- Modular Node-based Architecture: Chain nodes together to process and transform data in a structured way.
-- Partitioning and Integration: Split large tasks into smaller units, process them independently, and aggregate results.
-- ontext Integration: Automatically manage and update context across multiple nodes, ensuring relevance at each step.
-- Error Handling: Gracefully handle errors, with configurable policies to continue or halt workflows.
-- Rate Limiting: Prevent system overloads with rate-limited processing, ensuring efficient use of resources.
-- LLM Integration: Easily connect to LLMs and vector databases, integrating AI into your workflows.
+- Modular Design: Nodes encapsulate specific processes, and can be easily chained together to form more complex workflows.
+- Node Types: Wiggle provides a wide range of node types including , partitioning, integration, looping, branching, I/O handling, and more.
+- Set Node: Advanced encapsulation feature that allows for sub-flows and modularization within workflows.
+- Integration with Vector Databases: Includes support for vector database interfaces like Pinecone and Qdrant to handle machine learning and search-related workflows.
+- LLM Support: Chain together large language models (LLMs) and integrate context from vector databases for advanced processing.
 
 ## Architecture
+
+The architecture goals from the beginning was to define all relevant pieces using interfaces. This allows for simple workflows without much work but can be scaled by adding more complex implementations. Things like resource management, concurrency synchronization, branch logic, sub workflows, etc.
 
 The system consists of several key components:
 
@@ -57,22 +25,20 @@ The system consists of several key components:
 3. Guidance: Interface for generating processing instructions based on the signal’s data and context.
 4. Partitioning: Split large data into smaller chunks that are processed independently by multiple nodes.
 5. Integration: Combine the results of partitioned tasks into a coherent final result.
+6. Vector database integrations like Pinecone or Qdrant
+7. Native support for JSON schema to define output formats
 
-## Getting Started
+## Installation
 
-### Installation
+To install, simply add the repository to your Go project:
 
-To get started, clone this repository and install dependencies:
-
-```bash
-git clone https://github.com/dshills/wiggle
-cd wiggle
-go mod tidy
+```sh
+go get github.com/dshills/wiggle
 ```
 
-### Basic Example
+## Basic Usage
 
-Here’s a simple example that demonstrates sending a signal to multiple nodes, each processing a message using a large language model (LLM).
+Here’s a simple example of creating a workflow with nodes.
 
 ```go
 package main
@@ -98,31 +64,30 @@ func main() {
 	logger := nlib.NewSimpleLogger(log.Default())
 
 	// Create State Manager
-	stateMgr := nlib.NewSimpleStateManager()
+	stateMgr := nlib.NewSimpleStateManager(logger)
 
 	// Define output writer
 	writer := os.Stdout
 
 	// Create Nodes
-	firstNode := nlib.NewAINode(lm, logger, stateMgr, "AI Node")
-	outNode := nlib.NewOutputStringNode(writer, logger, stateMgr, "Output Node")
+	firstNode := nlib.NewAINode(lm, stateMgr, node.Options{ID: "AI-Node"})
+	outNode := nlib.NewOutputStringNode(writer, stateMgr, node.Options{ID: "Output Node"})
+
+	// Connect
 	firstNode.Connect(outNode)
 
+	sig := node.Signal{
+		NodeID: firstNode.ID(),
+		Task:   &nlib.Carrier{TextData: "Why is the sky blue?"},
+	}
+
 	// Send it
-	firstNode.InputCh() <- nlib.NewDefaultSignal(firstNode, "Why is the sky blue?")
+	firstNode.InputCh() <- sig
 
 	// Wait for the output node to print the result
 	stateMgr.WaitFor(outNode)
 }
 ```
-
-In this example:
-
-- We setup an LLM to receive queries
-- Created an AI Node and Output Node
-- Connected the nodes
-- Sent the task to the first node
-- Wait for the last node (output) to complete
 
 ## Core Concepts
 
@@ -145,19 +110,52 @@ type Signal struct {
 
 ### Node
 
-A Node is the core processing unit in Wiggle. It processes incoming signals, executes actions (such as querying a model or transforming data), and forwards the processed signal to connected nodes. The interface is modular, allowing different node types to be chained together for flexible workflows.
+A Node is the core processing unit in Wiggle. It processes incoming signals, executes actions (such as querying a model or transforming data), and forwards the processed signal to connected nodes. The interface is modular, allowing different node types to be chained together for flexible workflows. A Node can literally do anything you want. It only has to satisfy the interface.
 
 ```go
 type Node interface {
-    Connect(Node)
-    ID() string
-    InputCh() chan Signal
-    SetGuidance(Guidance)
-    SetHooks(Hooks)
-    SetID(string)
+    Connect(...Node)                // Connect other Nodes to receive output
+    ID() string                     // Node identifier
+    InputCh() chan Signal           // Start processing by sending to the input
+    SetID(string)                   // Set the Node ID
+    SetOptions(Options)             // Many advanced features pre and post processing functions, Error guidance, LLM Guidance, etc
+    SetStateManager(StateManager)   // Set the state manager
+}
+```
+
+### StateManager
+
+StateManager is responsible for tracking and updating the state of a signal as it moves through the node chain. It provides methods to update and retrieve the current state, ensuring that each node can access the relevant status information. This interface helps maintain workflow consistency and manage state transitions across complex processes.
+
+```go
+type StateManager interface {
+    GetState(Signal) State
+    UpdateState(Signal)
+
+    ContextManager() ContextManager     // Pass context between nodes
+    Coordinator() Coordinator           // Advanced: Coordinate synchronization
+    HistoryManager() HistoryManager     // Manage history of processing
+    Logger() Logger                     // Log processing
+    ResourceManager() ResourceManager   // Advanced: Manage resources Rate limit, etc
+
+    SetContextManager(ContextManager)
+    SetCoordinator(Coordinator)
+    SetHistoryManager(HistoryManager)
     SetLogger(Logger)
     SetResourceManager(ResourceManager)
-    SetStateManager(StateManager)
+
+    Register() chan struct{}            // Register for done chan
+    Complete()                          // Finish the processing
+    WaitFor(Node)                       // Block for completion
+
+    Log(string)
+    GetContext(key string) (DataCarrier, error)
+    SetContext(key string, data DataCarrier)
+    RemoveContext(key string)
+
+    AddHistory(Signal)
+    GetHistory() []Signal
+    FilterHistory(nodeid string) []Signal
 }
 ```
 
@@ -168,161 +166,66 @@ A PartitionerNode splits large or complex tasks into smaller chunks using a part
 ```go
 type PartitionerNode interface {
     Node
-    SetPartitionFunc(PartitionerFn)
-    SetNodeFactory(Factory)
-    SetIntegrator(IntegratorNode)
+    SetPartitionFunc(PartitionerFn) // Function that splits the task into n components
+    SetNodeFactory(Factory)         // A Factory will generate Nodes to use for each component
+    SetIntegrator(IntegratorNode)   // Function that takes the combined output of processing and integrates them into a single result
 }
 ```
 
-### Integrator Node
+## Node Types
 
-The IntegratorNode aggregates the results from partitioned tasks using an integrator function (IntegratorFn). This ensures that all the partitioned results are combined into a single, coherent output, maintaining data consistency throughout the workflow.
+- AI Node: Any Node can have an LLM attached
+- InputNode: Handles receiving input data from external sources.
+- PartitionNode: Splits tasks into smaller pieces and processes each piece
+- OutputNode: Manages output, sending data to its final destination.
+- BranchNode: Provides conditional branching.
+- LoopNode: Enables looping within workflows.
+- SetNode: Encapsulates sub-flows for more complex, modular designs.
+
+## Vector Database Support
+
+Wiggle supports integration with vector databases. Using a defined interface any VectorDB can be integrated.
+
+Currently supports
+- Pinecone: Handle vector operations through the pinecone.Client and its integration with the vector.Vector interface.
+- Qdrant: Manage indexes and execute searches with the qdrant package.
+- Any: We will be adding others or roll your own.
 
 ```go
-type IntegratorNode interface {
-    Node
-    SetIntegratorFunc(integratorFunc IntegratorFn)
-    AddGroup(Group)
+// VectorDB defines the operations that a Wiggle node needs to interact with a vector database.
+type Vector interface {
+	// InsertVector inserts a vector with the given ID and metadata into the database.
+	InsertVector(id string, vector []float64, metadata map[string]interface{}) error
+
+	// QueryVector searches for vectors in the database similar to the provided query vector.
+	// It returns a slice of IDs of the most similar vectors and their respective scores.
+	QueryVector(vector []float64, topK int) ([]QueryResult, error)
+
+	// UpdateVector updates the vector or metadata of an existing entry by its ID.
+	UpdateVector(id string, vector []float64, metadata map[string]interface{}) error
+
+	// DeleteVector removes the vector entry with the specified ID from the database.
+	DeleteVector(id string) error
+
+	// CreateIndex initializes an index on the vector database with the given dimension size.
+	CreateIndex(name string, dim int) error
+
+	// DeleteIndex deletes the index in the vector database.
+	DeleteIndex(name string) error
+
+	// CheckIndexExists verifies if an index is present in the vector database.
+	CheckIndexExists(name string) (bool, error)
 }
+
 ```
 
-### Loop Node
+This allows for workflows that can store, retrieve, and manipulate vectorized data—useful for tasks like machine learning and semantic search.
 
-```go
-type LoopNode interface {
-	Node
-	SetStartNode(Node)
-	SetConditionFunc(ConditionFn)
-}
-```
+## JSON Schema support
 
-### Branch Node
+Integrate JSON Schemas to fine tune data output formats
 
-```go
-type BranchNode interface {
-	Node
-	AddConditional(Node, ConditionFn)
-}
-```
-
-### Output Node
-
-```go
-type OutputNode interface {
-	Node
-	SetWriter(io.Writer)
-}
-```
-
-### Input Node
-
-```go
-type InputNode interface {
-	Node
-	SetReader(io.Reader)
-}
-```
-
-### Set Node
-
-A SetNode represents a collection of nodes that form a processing pipeline. It organizes nodes into a structured chain and manages the flow of data between them. A set allows you to define a complex workflow with multiple interconnected nodes. Because it is a Node itself it can be used like any other node.
-
-```go
-type SetNode interface {
-    Node
-    SetStartNode(Node)
-    SetFinalNode(Node)
-    SetCoordinator(Coordinator)
-}
-```
-
-### State Manager
-
-```go
-type StateManager interface {
-	Complete()
-	GetState(Signal) State
-	Register() chan struct{}
-	UpdateState(Signal)
-	WaitFor(Node)
-}
-```
-
-### Guidance
-
-Guidance generates structured instructions for processing based on the signal’s content and metadata. It typically interfaces with an LLM.
-
-```go
-type Guidance interface {
-    Generate(signal Signal) (Signal, error)
-}
-```
-
-
-### Hooks
-
-The Hooks interface allows custom pre- and post-processing logic to be executed before or after a node processes a signal. This is useful for validation, logging, or modifying results before the data moves forward.
-
-```go
-type Hooks interface {
-    BeforeAction(Signal) (Signal, error)
-    AfterAction(Signal) (Signal, error)
-}
-```
-
-### Coordinator
-
-The Coordinator manages the execution flow of multiple nodes, ensuring tasks complete within a specified timeout and handling errors.
-
-```go
-type Coordinator interface {
-    WaitForCompletion(nodes ...Node) error
-    CancelOnTimeout(duration time.Duration)
-}
-```
-
-### Resource Management
-
-The ResourceManager controls resource usage (e.g., rate limiting) to prevent overwhelming external systems like LLM APIs or databases.
-
-```go
-type ResourceManager interface {
-    RateLimit(Signal) error
-}
-```
-
-### Context Management
-
-A ContextManager manages the contextual data passed between nodes, ensuring that relevant information is consistent as the signal flows through the node chain.
-
-```go
-type ContextManager interface {
-    SetContext(key string, data DataCarrier)
-    RemoveContext(key string)
-    GetContext(key string) (DataCarrier, error)
-}
-```
-
-### Data Carrier
-
-The DataCarrier provides an abstraction for handling different types of data, such as strings, JSON, or vectors, within a signal. It ensures flexibility in how data is passed and processed across the workflow.
-
-```go
-type DataCarrier interface {
-    Vector() []float32
-    String() string
-    JSON() []byte
-}
-```
-
-## Example Workflow
-
-1. A PartitionerNode receives a signal containing a large chunk of data and uses its partition function to split the data into smaller chunks.
-2. The smaller chunks are distributed to downstream Action Nodes or other specialized nodes for processing.
-3. After processing, the results are aggregated by an IntegratorNode, which combines the partitioned data into a single output.
-4. The Set orchestrates this entire workflow, ensuring that nodes are connected and coordinated.
-
-## Contributing
+## Development
 
 Wiggle is under heavy development and we welcome ideas and contributions.  If you’d like to improve this framework or report issues, feel free to create a pull request or open an issue.
 
