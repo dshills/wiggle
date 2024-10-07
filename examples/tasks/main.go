@@ -28,7 +28,7 @@ func main() {
 		Task:           "Take the input and divide it into 10 smaller coding tasks. Each task should be something a developer can begin coding immediately",
 		TargetAudience: "Principal level software engineers",
 		Goal:           "10 tasks that can be coded",
-		Steps:          "1. Review the entire input 2. Consider possible coding tasks 3. Format into the 10 tasks",
+		Steps:          []string{"Review the entire input", "Consider possible coding tasks", "Format into the 10 tasks"},
 		OutputFormat:   "Numbered list in markdown",
 		Tone:           "professional software engineer",
 	}
@@ -40,7 +40,7 @@ func main() {
 		Task:           "Take a list of ten prograaming tasks formatted as markdown and convert it to JSON. Do not include anything other than the JSON in the output",
 		TargetAudience: "Principal level software engineers",
 		Goal:           "Properly formed JSON containing the 10 programming tasks",
-		Steps:          "1. Review the entire input 2. Identify the ten tasks 3. Format into JSON based on the OutputFormat",
+		Steps:          []string{"Review the entire input", "Identify the ten tasks", "Format into JSON based on the OutputFormat"},
 		OutputFormat: `
 		[
 			{"task_name": "name of task", "task_steps": ["step1", "step2"], "notes": ["note", "note"]}

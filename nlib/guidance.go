@@ -1,8 +1,8 @@
 package nlib
 
 import (
-	"fmt"
-	"strings"
+	"bytes"
+	"text/template"
 
 	"github.com/dshills/wiggle/node"
 )
@@ -13,18 +13,22 @@ var _ node.Guidance = (*SimpleGuidance)(nil)
 // SimpleGuidance provides a structure for generating prompts for large language models (LLMs).
 // It stores metadata such as the role, task, audience, goal, steps, format, and tone of the response.
 type SimpleGuidance struct {
-	Role           string `json:"role"`            // The role or persona for the LLM to assume
-	Task           string `json:"task"`            // The task or instruction the LLM needs to perform
-	TargetAudience string `json:"target_audience"` // The intended audience for the output
-	Goal           string `json:"goal"`            // The specific goal or outcome of the task
-	Steps          string `json:"steps"`           // The steps or process the LLM should follow
-	OutputFormat   string `json:"output_format"`   // The desired format for the output
-	Tone           string `json:"tone"`            // The tone the LLM should use in the response
+	Role           string   // The role or persona for the LLM to assume
+	Task           string   // The task or instruction the LLM needs to perform
+	TargetAudience string   // The intended audience for the output
+	Goal           string   // The specific goal or outcome of the task
+	Steps          []string // The steps or process the LLM should follow
+	OutputFormat   string   // The desired format for the output
+	Tone           string   // The tone the LLM should use in the response
+
+	tmpl *template.Template
 }
 
 // NewSimpleGuidance creates a new instance of SimpleGuidance with default values.
 // This is a constructor function that returns a pointer to the newly created SimpleGuidance.
 func NewSimpleGuidance() *SimpleGuidance {
+	guide := SimpleGuidance{}
+	guide.tmpl = ParseBasicTempl()
 	return &SimpleGuidance{}
 }
 
@@ -33,63 +37,25 @@ func NewSimpleGuidance() *SimpleGuidance {
 // If no context is found, the prompt is generated without it. The generated prompt is assigned
 // to the signal's Task and returned for further processing.
 func (g *SimpleGuidance) Generate(sig node.Signal, context string) (node.Signal, error) {
-	// Generate a prompt using both the signal's task and the retrieved context
-	prompt := g.prompt(sig.Task.String(), context)
-	sig.Task = &Carrier{TextData: prompt}
+	data := g.makeTemplateData(sig.Task.String(), context)
+	var buf bytes.Buffer
+	if err := g.tmpl.Execute(&buf, data); err != nil {
+		return sig, err
+	}
+	sig.Task = &Carrier{TextData: buf.String()}
 	return sig, nil
 }
 
-// prompt generates the prompt text based on the guidance metadata and any provided context.
-// It constructs the prompt using various tags like role, task, audience, goal, etc.
-// The context is included as part of the prompt if it's available.
-func (g *SimpleGuidance) prompt(input, context string) string {
-	builder := strings.Builder{}
-
-	// Add role to the prompt if it's provided
-	if g.Role != "" {
-		builder.WriteString(fmt.Sprintf("<role>%s</role>\n", g.Role))
+func (g *SimpleGuidance) makeTemplateData(task, context string) BasicTemplateData {
+	return BasicTemplateData{
+		Role:           g.Role,
+		Task:           g.Task,
+		TargetAudience: g.TargetAudience,
+		Goal:           g.Goal,
+		Steps:          g.Steps,
+		OutputFormat:   g.OutputFormat,
+		Tone:           g.Tone,
+		Context:        context,
+		Input:          task,
 	}
-
-	// Add task to the prompt if it's provided
-	if g.Task != "" {
-		builder.WriteString(fmt.Sprintf("<task>%s</task>\n", g.Task))
-	}
-
-	// Add target audience to the prompt if it's provided
-	if g.TargetAudience != "" {
-		builder.WriteString(fmt.Sprintf("<target audience>%s</target audience>\n", g.TargetAudience))
-	}
-
-	// Add goal to the prompt if it's provided
-	if g.Goal != "" {
-		builder.WriteString(fmt.Sprintf("<goal>%s</goal>\n", g.Goal))
-	}
-
-	// Add steps to the prompt if they're provided
-	if g.Steps != "" {
-		builder.WriteString(fmt.Sprintf("<steps>%s</steps>\n", g.Steps))
-	}
-
-	// Add output format to the prompt if it's provided
-	if g.OutputFormat != "" {
-		builder.WriteString(fmt.Sprintf("<format>%s</format>\n", g.OutputFormat))
-	}
-
-	// Add tone to the prompt if it's provided
-	if g.Tone != "" {
-		builder.WriteString(fmt.Sprintf("<tone>%s</tone>\n", g.Tone))
-	}
-
-	// Add context to the prompt if it's available
-	if context != "" {
-		builder.WriteString(fmt.Sprintf("<context>%s</context>", context))
-	}
-
-	// Add the input (task) to the prompt
-	if input != "" {
-		builder.WriteString(fmt.Sprintf("<input>%s</input>", input))
-	}
-
-	// Return the complete prompt as a string
-	return builder.String()
 }
