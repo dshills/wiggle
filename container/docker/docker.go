@@ -3,6 +3,7 @@ package docker
 import (
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
@@ -100,12 +101,49 @@ func sanitizeLocalPathStrict(localPath string, safePaths ...string) (string, err
 	}
 
 	for _, baseDir := range safePaths {
-		if strings.HasPrefix(cleanedPath, baseDir) {
-			return cleanedPath, nil
+		if isSubdirectory(baseDir, cleanedPath) {
+			if err := checkFilePermissions(cleanedPath); err == nil {
+				return cleanedPath, nil
+			}
 		}
 	}
 
-	return "", fmt.Errorf("path must be within a defined safe directory: %v", safePaths)
+	return "", fmt.Errorf("path must be within a defined safe directory or sub-directory: %v", safePaths)
+}
+
+// isSubdirectory checks if targetPath is equal to or a subdirectory of basePath.
+func isSubdirectory(basePath, targetPath string) bool {
+	// Clean and get absolute versions of the paths
+	absBasePath, err := filepath.Abs(filepath.Clean(basePath))
+	if err != nil {
+		return false
+	}
+
+	absTargetPath, err := filepath.Abs(filepath.Clean(targetPath))
+	if err != nil {
+		return false
+	}
+
+	// Ensure that basePath ends with a trailing slash for proper prefix matching
+	if !strings.HasSuffix(absBasePath, string(filepath.Separator)) {
+		absBasePath += string(filepath.Separator)
+	}
+
+	// Check if the target path is the same as or a subdirectory of the base path
+	return strings.HasPrefix(absTargetPath, absBasePath)
+}
+
+func checkFilePermissions(path string) error {
+	info, err := os.Stat(path)
+	if err != nil {
+		return fmt.Errorf("failed to stat path: %v", err)
+	}
+
+	if info.Mode()&0444 == 0 { // Check read permissions
+		return fmt.Errorf("insufficient read permissions for path: %s", path)
+	}
+
+	return nil
 }
 
 // Validate container ID (Docker's container IDs are alphanumeric)
