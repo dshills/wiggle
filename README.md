@@ -11,7 +11,7 @@ Wiggle tries to be a good Go citizen. It is a library more than a framework desp
 - Modular Design: Nodes encapsulate specific processes, and can be easily chained together to form more complex workflows.
 - Node Types: Wiggle provides a wide range of node types including , partitioning, integration, looping, branching, I/O handling, and more.
 - Set Node: Advanced encapsulation feature that allows for sub-flows and modularization within workflows.
-- Integration with Vector Databases: Includes support for vector database interfaces like Pinecone and Qdrant to handle machine learning and search-related workflows.
+- Integration with Vector Databases: Includes support for vector database interfaces like Pinecone and Qdrant to handle machine learning and search-related workflows. [wiggle-tools](https://github.com/dshills/wiggle-tools)
 - LLM Support: Chain together large language models (LLMs) and integrate context from vector databases for advanced processing.
 
 ## Architecture
@@ -182,44 +182,6 @@ type PartitionerNode interface {
 - LoopNode: Enables looping within workflows.
 - SetNode: Encapsulates sub-flows for more complex, modular designs.
 
-## Vector Database Support
-
-Wiggle supports integration with vector databases. Using a defined interface any VectorDB can be integrated.
-
-Currently supports
-- Pinecone: Handle vector operations through the pinecone.Client and its integration with the vector.Vector interface.
-- Qdrant: Manage indexes and execute searches with the qdrant package.
-- Any: We will be adding others or roll your own.
-
-```go
-// VectorDB defines the operations that a Wiggle node needs to interact with a vector database.
-type Vector interface {
-	// InsertVector inserts a vector with the given ID and metadata into the database.
-	InsertVector(id string, vector []float64, metadata map[string]interface{}) error
-
-	// QueryVector searches for vectors in the database similar to the provided query vector.
-	// It returns a slice of IDs of the most similar vectors and their respective scores.
-	QueryVector(vector []float64, topK int) ([]QueryResult, error)
-
-	// UpdateVector updates the vector or metadata of an existing entry by its ID.
-	UpdateVector(id string, vector []float64, metadata map[string]interface{}) error
-
-	// DeleteVector removes the vector entry with the specified ID from the database.
-	DeleteVector(id string) error
-
-	// CreateIndex initializes an index on the vector database with the given dimension size.
-	CreateIndex(name string, dim int) error
-
-	// DeleteIndex deletes the index in the vector database.
-	DeleteIndex(name string) error
-
-	// CheckIndexExists verifies if an index is present in the vector database.
-	CheckIndexExists(name string) (bool, error)
-}
-
-```
-
-This allows for workflows that can store, retrieve, and manipulate vectorized data—useful for tasks like machine learning and semantic search.
 
 ## JSON Schema support
 
