@@ -1,3 +1,6 @@
+//go:build anthropic
+// +build anthropic
+
 package anthropic
 
 import (
