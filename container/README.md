@@ -11,7 +11,7 @@ The `container` package provides an abstraction layer for interacting with conta
 - **Wait for Containers**: Wait for containers to finish their tasks and retrieve their exit codes.
 - **Flexible Options**: Configure container options, such as environment variables, mounts, and working directories.
 
-Usage
+## Usage
 
 Defining a Container Interface
 
@@ -51,7 +51,7 @@ type Instance interface {
 - CloneRepo: Clone a git repository into the container.
 - Wait: Block until the container exits and return its exit code.
 
-Example
+## Example
 
 Here’s an example of how you might use the container package to start a container, inject code, run tests, and clean up the container:
 
@@ -122,7 +122,7 @@ func main() {
 }
 ```
 
-Options Configuration
+## Options Configuration
 
 The Options struct allows you to specify various settings for starting containers:
 
@@ -137,7 +137,7 @@ type Options struct {
 }
 ```
 
-Mounting Volumes
+## Mounting Volumes
 
 Use the Mount struct to define source and target paths for mounting directories:
 
@@ -148,7 +148,7 @@ type Mount struct {
 }
 ```
 
-Waiting for Containers
+## Waiting for Containers
 
 You can wait for a container to finish execution by using the Wait() method, which returns the exit code:
 
