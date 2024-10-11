@@ -29,9 +29,7 @@ type SimpleGuidance struct {
 // NewSimpleGuidance creates a new instance of SimpleGuidance with default values.
 // This is a constructor function that returns a pointer to the newly created SimpleGuidance.
 func NewSimpleGuidance() *SimpleGuidance {
-	guide := SimpleGuidance{}
-	guide.tmpl = ParseBasicTempl()
-	return &SimpleGuidance{}
+	return &SimpleGuidance{tmpl: basicTmpl}
 }
 
 // Generate constructs a new signal by creating a prompt from the guidance metadata.

@@ -11,19 +11,12 @@ import (
 // Compile-time check to ensure SimpleBranchNode implements the node.BranchNode
 var _ node.BranchNode = (*SimpleBranchNode)(nil)
 
-// branchCondition holds a target node and a condition function (condFn).
-// When condFn evaluates to true, the signal is sent to the target node.
-type branchCondition struct {
-	target node.Node        // The node to which the signal will be sent if the condition is true.
-	condFn node.ConditionFn // The condition function to evaluate.
-}
-
 // SimpleBranchNode represents a branching node that routes signals to different nodes
 // based on multiple conditions. It checks each condition in sequence, sending the signal
 // to the first node whose condition is met.
 type SimpleBranchNode struct {
-	EmptyNode                    // Inherits base node functionality.
-	conditions []branchCondition // List of conditions and their associated target nodes.
+	EmptyNode                         // Inherits base node functionality.
+	conditions []node.BranchCondition // List of conditions and their associated target nodes.
 }
 
 // NewSimpleBranchNode creates a new SimpleBranchNode with the given logger, state manager, and name.
@@ -40,7 +33,7 @@ func NewSimpleBranchNode(mgr node.StateManager, options node.Options) *SimpleBra
 			select {
 			case sig := <-n.InputCh():
 				n.LogInfo("Received Signal")
-				n.processSignal(sig)
+				n.ProcessSignal(sig)
 			case <-n.StateManager().Register():
 				n.LogInfo("Received Done")
 				return
@@ -51,10 +44,10 @@ func NewSimpleBranchNode(mgr node.StateManager, options node.Options) *SimpleBra
 	return &n
 }
 
-// processSignal processes the incoming signal, checking conditions in sequence.
+// ProcessSignal processes the incoming signal, checking conditions in sequence.
 // If a condition is met, the signal is sent to the corresponding target node.
 // If no conditions are met, the signal is sent to the connected nodes.
-func (n *SimpleBranchNode) processSignal(sig node.Signal) {
+func (n *SimpleBranchNode) ProcessSignal(sig node.Signal) {
 	var err error
 	sig, err = n.PreProcessSignal(sig) // Run pre-processing hooks on the signal.
 	if err != nil {
@@ -73,10 +66,10 @@ func (n *SimpleBranchNode) processSignal(sig node.Signal) {
 
 	// Iterate over the conditions to find a match.
 	for _, cond := range n.conditions {
-		if cond.condFn(sig) {
-			n.LogInfo(fmt.Sprintf("Sending to %s", cond.target.ID()))
-			newSig := NewSignalFromSignal(cond.target.ID(), sig)
-			cond.target.InputCh() <- newSig
+		if cond.ConditionFn(sig) {
+			n.LogInfo(fmt.Sprintf("Sending to %s", cond.Target.ID()))
+			newSig := NewSignalFromSignal(cond.Target.ID(), sig)
+			cond.Target.InputCh() <- newSig
 			return
 		}
 	}
@@ -93,13 +86,11 @@ func (n *SimpleBranchNode) processSignal(sig node.Signal) {
 
 // AddConditional adds a new condition and target node to the branch.
 // If the condition function evaluates to true, the signal is sent to the target node.
-func (n *SimpleBranchNode) AddConditional(target node.Node, fn node.ConditionFn) {
-	// Ensure both the target node and condition function are non-nil.
-	if target == nil || fn == nil {
-		return
-	}
-
+func (n *SimpleBranchNode) AddConditional(conditions ...node.BranchCondition) {
 	// Create a new branchCondition and add it to the list of conditions.
-	bc := branchCondition{target: target, condFn: fn}
-	n.conditions = append(n.conditions, bc)
+	n.conditions = append(n.conditions, conditions...)
+}
+
+func (n *SimpleBranchNode) Conditions() []node.BranchCondition {
+	return n.conditions
 }

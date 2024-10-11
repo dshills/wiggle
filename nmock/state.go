@@ -6,45 +6,7 @@ import (
 )
 
 // Compile-time check
-var _ node.Guidance = (*MockGuidance)(nil)
-var _ node.ResourceManager = (*MockResourceManager)(nil)
-var _ node.Hooks = (*MockHooks)(nil)
 var _ node.StateManager = (*MockStateManager)(nil)
-
-// MockGuidance is a testing mock for Guidance
-type MockGuidance struct {
-	mock.Mock
-}
-
-func (m *MockGuidance) Generate(sig node.Signal, context string) (node.Signal, error) {
-	args := m.Called(sig, context)
-	return args.Get(0).(node.Signal), args.Error(1)
-}
-
-// MookHooks is a testing mock for Hooks
-type MockHooks struct {
-	mock.Mock
-}
-
-func (m *MockHooks) BeforeAction(sig node.Signal) (node.Signal, error) {
-	args := m.Called(sig)
-	return args.Get(0).(node.Signal), args.Error(1)
-}
-
-func (m *MockHooks) AfterAction(sig node.Signal) (node.Signal, error) {
-	args := m.Called(sig)
-	return args.Get(0).(node.Signal), args.Error(1)
-}
-
-// MockResourceManager is a testing mock for resource manager
-type MockResourceManager struct {
-	mock.Mock
-}
-
-func (m *MockResourceManager) RateLimit(sig node.Signal) error {
-	args := m.Called(sig)
-	return args.Error(0)
-}
 
 // MockStateManager is a testing mock for StateManager, providing mock behavior
 // for methods such as logging, state updates, resource management, coordination, context, and history management.
