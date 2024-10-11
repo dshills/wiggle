@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// nolint
 func TestSimpleNodeHooks_BeforeAction(t *testing.T) {
 	// Mock signal and hook functions
 	signal := node.Signal{}
@@ -38,6 +39,7 @@ func TestSimpleNodeHooks_BeforeAction(t *testing.T) {
 	assert.EqualError(t, err, "before hook failed")
 }
 
+// nolint
 func TestSimpleNodeHooks_AfterAction(t *testing.T) {
 	// Mock signal and hook functions
 	signal := node.Signal{}
