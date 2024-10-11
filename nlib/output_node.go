@@ -3,7 +3,6 @@ package nlib
 import (
 	"context"
 	"io"
-	"time"
 
 	"github.com/dshills/wiggle/node"
 )
@@ -41,11 +40,9 @@ func NewOutputStringNode(w io.Writer, mgr node.StateManager, options node.Option
 
 				sig.Status = StatusInProcess
 				// Write the signal's data (response) to the provided writer.
-				_, err := n.writer.Write([]byte(sig.Task.String()))
+				_, err := n.writer.Write([]byte(sig.Task.String() + "\n"))
 				if err != nil {
-					n.LogErr(err) // Log any errors encountered during writing.
-					sig.Err = err.Error()
-					sig.Status = StatusFail
+					n.Fail(sig, err)
 					return
 				}
 				sig.Status = StatusSuccess
@@ -56,10 +53,7 @@ func NewOutputStringNode(w io.Writer, mgr node.StateManager, options node.Option
 					return
 				}
 
-				ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-				defer cancel() // Ensure the context is cancelled once we're done
-
-				if err := n.SendToConnected(ctx, sig); err != nil {
+				if err := n.SendToConnected(context.TODO(), sig); err != nil {
 					n.Fail(sig, err)
 					return
 				}

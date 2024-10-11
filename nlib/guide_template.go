@@ -1,9 +1,5 @@
 package nlib
 
-import "text/template"
-
-var basicTmpl = template.Must(template.New("basic").Funcs(template.FuncMap{"add": AddFn}).Parse(BasicTemplate))
-
 // BasicTemplateData is the data to populate in the BasicTemplate
 type BasicTemplateData struct {
 	Role           string

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/dshills/wiggle/node"
 )
@@ -84,10 +83,7 @@ func (n *InteractiveNode) processSignal(sig node.Signal) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel() // Ensure the context is cancelled once we're done
-
-	if err := n.SendToConnected(ctx, sig); err != nil {
+	if err := n.SendToConnected(context.TODO(), sig); err != nil {
 		n.Fail(sig, err)
 		return
 	}

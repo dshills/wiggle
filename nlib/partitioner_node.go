@@ -3,7 +3,6 @@ package nlib
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/dshills/wiggle/node"
 )
@@ -123,8 +122,7 @@ func (n *SimplePartitionerNode) processSignal(sig node.Signal) {
 	// Integrate the results from the partitions
 	response, err := n.integrationFunc(respList)
 	if err != nil {
-		n.LogErr(err)
-		sig.Err = err.Error()
+		n.Fail(sig, err)
 		return
 	}
 
@@ -138,11 +136,7 @@ func (n *SimplePartitionerNode) processSignal(sig node.Signal) {
 		return
 	}
 
-	// Send the processed signal to connected nodes with a 2-second timeout
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel() // Ensure context is canceled after sending the signal
-
-	if err := n.SendToConnected(ctx, sig); err != nil {
+	if err := n.SendToConnected(context.TODO(), sig); err != nil {
 		n.Fail(sig, err)
 		return
 	}

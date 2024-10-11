@@ -2,7 +2,6 @@ package schema
 
 import (
 	"fmt"
-	"log"
 	"reflect"
 	"regexp"
 	"strings"
@@ -14,8 +13,6 @@ Written by GPT-4o
 Directed, modified, and tested by Davin Hills
 */
 
-var debug = false
-
 const (
 	SchemaTypeObject  = "object"
 	SchemaTypeArray   = "array"
@@ -23,10 +20,6 @@ const (
 	SchemaTypeString  = "string"
 	SchemaTypeInteger = "integer"
 )
-
-func SetDebug(onoff bool) {
-	debug = onoff
-}
 
 // Validate checks the provided JSON data against the given schema, validating types, required fields,
 // formats, enumerations, logical schema constraints (oneOf, anyOf, allOf, not), and custom validators.
@@ -39,10 +32,6 @@ func Validate(data map[string]interface{}, schema Schema, customValidator Custom
 // validateWithPath performs validation on the provided value against the schema and keeps track of the field path.
 // This helps with error reporting for nested objects, arrays, and complex validation scenarios.
 func validateWithPath(value interface{}, schema Schema, path string, customValidator CustomValidator) error {
-	if debug {
-		log.Printf("validateWithPath value: %v schema: %v path: %v", value, schema, path)
-	}
-
 	//First, validate the value against its schema using validateValue
 	if schema.Type != "" {
 		if err := validateValue(value, schema); err != nil {
@@ -172,9 +161,6 @@ func validateWithPath(value interface{}, schema Schema, path string, customValid
 
 // validatePattern checks if a string value matches the regular expression pattern defined in the schema.
 func validatePattern(value string, pattern string) error {
-	if debug {
-		log.Printf("validatePattern value: %v pattern: %v", value, pattern)
-	}
 	matched, err := regexp.MatchString(pattern, value)
 	if err != nil {
 		return fmt.Errorf("invalid pattern: %v", err)
@@ -187,9 +173,6 @@ func validatePattern(value string, pattern string) error {
 
 // validateEnum checks if a value is one of the allowed enum values defined in the schema.
 func validateEnum(value interface{}, enumValues []interface{}) error {
-	if debug {
-		log.Printf("validateEnum value: %v enumValues: %v", value, enumValues)
-	}
 	for _, enumVal := range enumValues {
 		if value == enumVal {
 			return nil // Value is in the enum
@@ -200,9 +183,6 @@ func validateEnum(value interface{}, enumValues []interface{}) error {
 
 // validateOneOf ensures the value matches exactly one of the schemas in the oneOf array.
 func validateOneOf(value interface{}, schemas []Schema) error {
-	if debug {
-		log.Printf("validateOneOf value: %v schemas: %v", value, schemas)
-	}
 	matchCount := 0
 	for _, schema := range schemas {
 		if err := validateWithPath(value, schema, "", nil); err == nil {
@@ -217,9 +197,6 @@ func validateOneOf(value interface{}, schemas []Schema) error {
 
 // validateAnyOf ensures the value matches at least one of the schemas in the anyOf array.
 func validateAnyOf(value interface{}, schemas []Schema) error {
-	if debug {
-		log.Printf("validateAnyOf value: %v schemas: %v", value, schemas)
-	}
 	for _, schema := range schemas {
 		if err := validateWithPath(value, schema, "", nil); err == nil {
 			return nil // Matches at least one schema
@@ -230,12 +207,6 @@ func validateAnyOf(value interface{}, schemas []Schema) error {
 
 // validateAllOf ensures the value matches all of the schemas in the allOf array.
 func validateAllOf(value interface{}, schemas []Schema) error {
-	if debug {
-		log.Printf("validateAllOf value: %v schemas: %v", value, schemas)
-	}
-	if debug {
-		log.Printf("validateAllOf value: %v schemas: %v", value, schemas)
-	}
 	for _, schema := range schemas {
 		if err := validateWithPath(value, schema, "", nil); err != nil {
 			return fmt.Errorf("value does not match all schemas in 'allOf': %v", err)
@@ -246,9 +217,6 @@ func validateAllOf(value interface{}, schemas []Schema) error {
 
 // validateNot checks that the value does not match the schema in the not field.
 func validateNot(value interface{}, schema Schema) error {
-	if debug {
-		log.Printf("validateNot value: %v schema: %v", value, schema)
-	}
 	if err := validateWithPath(value, schema, "", nil); err == nil {
 		return fmt.Errorf("value matches disallowed schema in 'not'")
 	}
@@ -259,9 +227,6 @@ type CustomValidator func(value interface{}) error
 
 // validateWithCustom applies a custom validator function to the value for additional validation.
 func validateWithCustom(value interface{}, schema Schema, customValidator CustomValidator) error {
-	if debug {
-		log.Printf("validateWithCustom value: %v schema: %v", value, schema)
-	}
 	// Ensure custom validation is only called for non-object types
 	if schema.Type == SchemaTypeObject {
 		return nil // Do not run custom validation on objects
@@ -285,9 +250,6 @@ func validateWithCustom(value interface{}, schema Schema, customValidator Custom
 // - schema: The schema that defines constraints for the array and its items.
 // Returns an error if the array or any of its items fail validation, or nil if validation is successful.
 func validateArray(value []interface{}, schema Schema, path string, customValidator CustomValidator) error {
-	if debug {
-		log.Printf("validateArray value: %v schema: %v, path: %v", path, schema, path)
-	}
 	// Check minItems and maxItems constraints
 	if schema.MinItems != nil && len(value) < *schema.MinItems {
 		return fmt.Errorf("%s: array has fewer than %d items", path, *schema.MinItems)
@@ -317,9 +279,6 @@ func validateArray(value []interface{}, schema Schema, path string, customValida
 // - format: A string specifying the format to validate against (e.g., "email", "date").
 // Returns an error if the value does not match the expected format, or nil if validation is successful.
 func validateFormat(value string, format string) error {
-	if debug {
-		log.Printf("validateFormat value: %v format: %v", value, format)
-	}
 	switch format {
 	case "email":
 		// Basic email format validation (you could replace this with a more sophisticated regex)
@@ -346,9 +305,6 @@ func validateFormat(value string, format string) error {
 // - schema: The schema that defines the expected type and additional constraints (like min/max values).
 // Returns an error if the value fails validation, or nil if validation is successful.
 func validateValue(value interface{}, schema Schema) error {
-	if debug {
-		log.Printf("validateValue value: %v schema: %v", value, schema)
-	}
 	// Check type first
 	if err := checkType(value, schema.Type); err != nil {
 		return err
@@ -397,9 +353,6 @@ func validateValue(value interface{}, schema Schema) error {
 // - expectedType: A string representing the expected type (e.g., SchemaTypeString, SchemaTypeInteger).
 // Returns an error if the value is not of the expected type, or nil if the type check passes.
 func checkType(value interface{}, expectedType string) error {
-	if debug {
-		log.Printf("checkType value: %v expectedType: %v", value, expectedType)
-	}
 	switch expectedType {
 	case SchemaTypeString:
 		if _, ok := value.(string); !ok {

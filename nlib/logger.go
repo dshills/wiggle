@@ -8,6 +8,7 @@ import (
 
 // Ensure that SimpleLogger implements the node.Logger interface
 var _ node.Logger = (*SimpleLogger)(nil)
+var _ node.Logger = (*NoLogger)(nil)
 
 // SimpleLogger is a basic implementation of the node.Logger interface.
 // It wraps the standard library's log.Logger to provide logging functionality for nodes.
@@ -25,4 +26,14 @@ func NewSimpleLogger(l *log.Logger) *SimpleLogger {
 // It simply prints the message with a newline to the standard log output.
 func (l *SimpleLogger) Log(msg string) {
 	l.l.Println(msg) // Log the message using the standard logger
+}
+
+type NoLogger struct{}
+
+func NewNoLogger() *NoLogger {
+	return &NoLogger{}
+}
+
+func (l *NoLogger) Log(_ string) {
+	// NOOP
 }

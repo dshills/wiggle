@@ -22,14 +22,12 @@ type SimpleGuidance struct {
 	OutputFormat   string         // The desired format for the output
 	Tone           string         // The tone the LLM should use in the response
 	Schema         *schema.Schema // Optional JSON schema for defining output format
-
-	tmpl *template.Template
 }
 
 // NewSimpleGuidance creates a new instance of SimpleGuidance with default values.
 // This is a constructor function that returns a pointer to the newly created SimpleGuidance.
 func NewSimpleGuidance() *SimpleGuidance {
-	return &SimpleGuidance{tmpl: basicTmpl}
+	return &SimpleGuidance{}
 }
 
 // Generate constructs a new signal by creating a prompt from the guidance metadata.
@@ -37,12 +35,18 @@ func NewSimpleGuidance() *SimpleGuidance {
 // If no context is found, the prompt is generated without it. The generated prompt is assigned
 // to the signal's Task and returned for further processing.
 func (g *SimpleGuidance) Generate(sig node.Signal, context string) (node.Signal, error) {
+	var err error
+	tmpl := template.New("basic").Funcs(template.FuncMap{"add": AddFn})
+	tmpl, err = tmpl.Parse(BasicTemplate)
+	if err != nil {
+		return sig, err
+	}
 	data, err := g.makeTemplateData(sig.Task.String(), context)
 	if err != nil {
 		return sig, err
 	}
 	var buf bytes.Buffer
-	if err := g.tmpl.Execute(&buf, data); err != nil {
+	if err := tmpl.Execute(&buf, data); err != nil {
 		return sig, err
 	}
 	sig.Task = &Carrier{TextData: buf.String()}
