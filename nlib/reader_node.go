@@ -3,7 +3,6 @@ package nlib
 import (
 	"context"
 	"io"
-	"time"
 
 	"github.com/dshills/wiggle/node"
 )
@@ -59,8 +58,7 @@ func (n *SimpleStringReaderNode) processSignal(sig node.Signal) {
 	sig.Status = StatusInProcess
 	byts, err := io.ReadAll(n.reader)
 	if err != nil {
-		n.LogErr(err)
-		sig.Err = err.Error()
+		n.Fail(sig, err)
 		return
 	}
 	sig.Result = &Carrier{TextData: string(byts)}
@@ -73,10 +71,7 @@ func (n *SimpleStringReaderNode) processSignal(sig node.Signal) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel() // Ensure the context is cancelled once we're done
-
-	if err := n.SendToConnected(ctx, sig); err != nil {
+	if err := n.SendToConnected(context.TODO(), sig); err != nil {
 		n.Fail(sig, err)
 		return
 	}

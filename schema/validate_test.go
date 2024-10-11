@@ -2,7 +2,6 @@ package schema
 
 import (
 	"fmt"
-	"log"
 	"testing"
 )
 
@@ -90,27 +89,18 @@ func TestValidateOneOf(t *testing.T) {
 	// Valid string value
 
 	data := map[string]interface{}{"field": "test"}
-	if debug {
-		log.Printf("\n\nTestValidateOneOf value: %v schema: %v", data, schema)
-	}
 	if err := Validate(data, schema, nil); err != nil {
 		t.Errorf("Expected valid value for oneOf, %v got error: %v", "test", err)
 	}
 
 	// Valid integer value
 	dataInt := map[string]interface{}{"field": 123.0}
-	if debug {
-		log.Printf("\n\nTestValidateOneOf value: %v schema: %v", dataInt, schema)
-	}
 	if err := Validate(dataInt, schema, nil); err != nil {
 		t.Errorf("Expected valid integer for oneOf, %v got error: %v", 123, err)
 	}
 
 	// Invalid value (should match neither schema)
 	dataInvalid := map[string]interface{}{"field": []interface{}{1, 2, 3}}
-	if debug {
-		log.Printf("\n\nTestValidateOneOf value: %v schema: %v", dataInvalid, schema)
-	}
 	if err := Validate(dataInvalid, schema, nil); err == nil {
 		t.Errorf("Expected error for invalid value in oneOf, %v but got none", []interface{}{1, 2, 3})
 	}
@@ -245,18 +235,12 @@ func TestCustomValidator(t *testing.T) {
 
 	// Valid custom validation
 	data := map[string]interface{}{"field": "customString"}
-	if debug {
-		log.Printf("\n\nTestCustomValidator value: %v schema: %v", data, schema)
-	}
 	if err := Validate(data, schema, customValidator); err != nil {
 		t.Errorf("Expected custom validation to pass, got error: %v", err)
 	}
 
 	// Invalid custom validation
 	dataInvalid := map[string]interface{}{"field": "fail"}
-	if debug {
-		log.Printf("\n\nTestCustomValidator value: %v schema: %v", dataInvalid, schema)
-	}
 	if err := Validate(dataInvalid, schema, customValidator); err == nil {
 		t.Errorf("Expected custom validation to fail, but got none")
 	}

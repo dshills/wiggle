@@ -3,7 +3,6 @@ package nlib
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/dshills/wiggle/node"
 )
@@ -75,10 +74,7 @@ func (n *SimpleBranchNode) ProcessSignal(sig node.Signal) {
 	}
 	sig.Status = StatusSuccess
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel() // Ensure the context is cancelled once we're done
-	// If no conditions are met, send the signal to the next connected node.
-	if err := n.SendToConnected(ctx, sig); err != nil {
+	if err := n.SendToConnected(context.TODO(), sig); err != nil {
 		n.Fail(sig, err)
 		return
 	}

@@ -3,10 +3,16 @@ package nlib
 import (
 	"bytes"
 	"testing"
+	"text/template"
 )
 
 func TestBasicTemplate(t *testing.T) {
-	tmpl := basicTmpl
+	var err error
+	tmpl := template.New("basic").Funcs(template.FuncMap{"add": AddFn})
+	tmpl, err = tmpl.Parse(BasicTemplate)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	data := BasicTemplateData{
 		Role:           "",

@@ -7,6 +7,16 @@ Written by GPT-4o
 Directed, modified, and tested by Davin Hills
 */
 
+func FromSchemaJSON(schemaBytes []byte) (Schema, error) {
+	smap := make(map[string]interface{})
+	err := json.Unmarshal(schemaBytes, &smap)
+	if err != nil {
+		return Schema{}, err
+	}
+
+	return ParseJSONSchema(smap)
+}
+
 // Schema structure definition
 type Schema struct {
 	Type       string            `json:"type"`

@@ -50,15 +50,14 @@ func NewAINode(lm llm.LLM, sm node.StateManager, options node.Options) node.Node
 // sends it to the LLM for processing, and handles the response. If any error occurs during
 // processing, the signal is marked as failed. The function also logs the total time taken to process the signal.
 func (n *AINode) processSignal(sig node.Signal) {
-	start := time.Now() // Record the start time for performance logging
+	start := time.Now()
 	var err error
-	var ctx = context.TODO() // Create a context (can be enhanced with timeout/cancellation)
+	var ctx = context.TODO()
 
 	// Preprocess the signal before sending it to the LLM
 	sig, err = n.PreProcessSignal(sig)
 	if err != nil {
-		n.LogErr(err)               // Log the error
-		n.StateManager().Complete() // Signal that processing is complete
+		n.Fail(sig, err)
 		return
 	}
 
@@ -84,7 +83,6 @@ func (n *AINode) processSignal(sig node.Signal) {
 	// Call the LLM to process the signal
 	sig, err = n.CallLLM(ctx, sig)
 	if err != nil {
-		n.LogErr(err)    // Log the error
 		n.Fail(sig, err) // Mark the signal as failed
 		return
 	}
