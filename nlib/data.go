@@ -15,6 +15,14 @@ type Carrier struct {
 	Base64Data []string
 }
 
+func NewTextCarrier(txt string) *Carrier {
+	return &Carrier{TextData: txt}
+}
+
+func NewVectorCarrier(vec [][]float32) *Carrier {
+	return &Carrier{VectorData: vec}
+}
+
 func (c *Carrier) Vector() [][]float32 {
 	return c.VectorData
 }

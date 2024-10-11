@@ -75,6 +75,13 @@ type LoopNode interface {
 	SetConditionFunc(ConditionFn)
 }
 
+// BranchCondition holds a target node and a condition function (condFn).
+// When ConditionFn evaluates to true, the signal is sent to the target node.
+type BranchCondition struct {
+	Target      Node        // The node to which the signal will be sent if the condition is true.
+	ConditionFn ConditionFn // The condition function to evaluate.
+}
+
 // BracnhNode will evaluate the Signal using the added ConditionFn
 // They wil be evaluated in order of being added
 // If a condition is met it will call the Node associated with the condition
@@ -82,7 +89,8 @@ type LoopNode interface {
 // The "if-elseif-else" in a set of nodes
 type BranchNode interface {
 	Node
-	AddConditional(Node, ConditionFn)
+	AddConditional(...BranchCondition)
+	Conditions() []BranchCondition
 }
 
 // OutputNode writes data to a writer

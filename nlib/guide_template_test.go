@@ -6,7 +6,7 @@ import (
 )
 
 func TestBasicTemplate(t *testing.T) {
-	tmpl := ParseBasicTempl()
+	tmpl := basicTmpl
 
 	data := BasicTemplateData{
 		Role:           "",
