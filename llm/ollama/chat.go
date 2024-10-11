@@ -70,7 +70,7 @@ func (o *Ollama) send(ctx context.Context, baseURL string, reader io.Reader) (*c
 		return nil, err
 	}
 	if len(chatResp.Message.Content) == 0 {
-		return nil, err
+		return nil, fmt.Errorf("no content")
 	}
 
 	return &chatResp, nil
