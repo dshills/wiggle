@@ -52,6 +52,10 @@ func (n *EmptyNode) InputCh() chan node.Signal {
 	return n.inputCh
 }
 
+func (n *EmptyNode) SetInputCh(inCh chan node.Signal) {
+	n.inputCh = inCh
+}
+
 func (n *EmptyNode) SetOptions(options node.Options) {
 	n.hooks = options.Hooks
 	n.guide = options.Guidance
