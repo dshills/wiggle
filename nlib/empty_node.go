@@ -183,7 +183,7 @@ func (n *EmptyNode) SendToConnected(ctx context.Context, sig node.Signal) error 
 
 	for _, conNode := range n.nodes {
 		n.LogInfo(fmt.Sprintf("Sending to %s", conNode.ID()))
-		newSig := NewSignalFromSignal(conNode.ID(), sig)
+		newSig := NewSignalFromSignal(conNode.ID(), n.ID(), sig)
 
 		select {
 		case <-ctx.Done():

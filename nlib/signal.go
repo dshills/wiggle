@@ -12,10 +12,11 @@ func SignalToLog(sig node.Signal) string {
 	return fmt.Sprintf("{ NodeID: %s, data: %v, Response: %v, Err: %s, Status: %s }", sig.NodeID, sig.Task, sig.Result, sig.Err, sig.Status)
 }
 
-func NewSignalFromSignal(id string, sig node.Signal) node.Signal {
+func NewSignalFromSignal(toID, fromID string, sig node.Signal) node.Signal {
 	return node.Signal{
-		NodeID: id,
-		Task:   sig.Result,
-		Meta:   sig.Meta,
+		NodeID:     toID,
+		FromNodeID: fromID,
+		Task:       sig.Result,
+		Meta:       sig.Meta,
 	}
 }

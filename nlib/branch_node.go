@@ -67,7 +67,7 @@ func (n *SimpleBranchNode) ProcessSignal(sig node.Signal) {
 	for _, cond := range n.conditions {
 		if cond.ConditionFn(sig) {
 			n.LogInfo(fmt.Sprintf("Sending to %s", cond.Target.ID()))
-			newSig := NewSignalFromSignal(cond.Target.ID(), sig)
+			newSig := NewSignalFromSignal(cond.Target.ID(), n.ID(), sig)
 			cond.Target.InputCh() <- newSig
 			return
 		}
