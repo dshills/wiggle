@@ -6,12 +6,13 @@ package node
 // allowing each node to modify, route, and act on the data while keeping track of its
 // progression throughout the workflow.
 type Signal struct {
-	Err    string
-	Meta   []Meta
-	NodeID string
-	Result DataCarrier
-	Status string
-	Task   DataCarrier
+	Err        string
+	Meta       []Meta
+	NodeID     string
+	FromNodeID string
+	Result     DataCarrier
+	Status     string
+	Task       DataCarrier
 }
 
 // Meta represents key-value pairs of metadata associated with a signal.

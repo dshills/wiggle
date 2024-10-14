@@ -71,7 +71,7 @@ func (n *SimpleLoopNode) processSignal(sig node.Signal) {
 	if n.condFn == nil || !n.condFn(sig) {
 		if n.startNode != nil {
 			n.LogInfo(fmt.Sprintf("Sending to %s", n.startNode.ID()))
-			newSig := NewSignalFromSignal(n.startNode.ID(), sig)
+			newSig := NewSignalFromSignal(n.startNode.ID(), n.ID(), sig)
 			n.startNode.InputCh() <- newSig
 		}
 	}
