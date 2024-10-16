@@ -9,20 +9,20 @@ import (
 	"net/url"
 )
 
-func (ai *OpenAI) GenEmbed(_ context.Context, txt string) ([]float32, error) {
+func (ai *OpenAI) GenEmbed(ctx context.Context, txt string) ([]float32, error) {
 	const embedEP = "/v1/embeddings"
 	ep, err := url.JoinPath(ai.baseURL, embedEP)
 	if err != nil {
 		return nil, err
 	}
-	req := embedReq{Model: ai.model, Input: txt}
+	req := embedReq{Model: ai.model, Input: txt, EncodingFormat: "float"}
 	js, err := json.Marshal(&req)
 	if err != nil {
 		return nil, err
 	}
 
 	client := http.Client{}
-	httpReq, err := http.NewRequest(http.MethodPost, ep, bytes.NewReader(js))
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, ep, bytes.NewReader(js))
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +44,14 @@ func (ai *OpenAI) GenEmbed(_ context.Context, txt string) ([]float32, error) {
 		return nil, err
 	}
 
-	return resp.Embedding, nil
+	if len(resp.Data) == 0 {
+		return nil, fmt.Errorf("no data returned")
+	}
+	if len(resp.Data) > 1 {
+		return nil, fmt.Errorf("expected single vectore got %v", len(resp.Data))
+	}
+
+	return resp.Data[0].Embedding, nil
 }
 
 type embedReq struct {
@@ -53,7 +60,15 @@ type embedReq struct {
 	EncodingFormat string `json:"encoding_format"`
 }
 type embedResp struct {
-	Object    string    `json:"object"`
-	Embedding []float32 `json:"embedding"`
-	Index     int       `json:"index"`
+	Object string `json:"object"`
+	Data   []struct {
+		Object    string    `json:"object"`
+		Embedding []float32 `json:"embedding"`
+		Index     int       `json:"index"`
+	} `json:"data"`
+	Model string `json:"model"`
+	Usage struct {
+		PromptTokens int `json:"prompt_tokens"`
+		TotalTokens  int `json:"total_tokens"`
+	} `json:"usage"`
 }
