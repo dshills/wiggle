@@ -26,6 +26,10 @@ func (ai *OpenAI) GenEmbed(_ context.Context, txt string) ([]float32, error) {
 	if err != nil {
 		return nil, err
 	}
+	httpReq.Header.Add("Content-Type", "application/json")
+	httpReq.Header.Add("Accept", "application/json")
+	httpReq.Header.Add("Authorization", fmt.Sprintf("Bearer %s", ai.apiKey))
+
 	httpResp, err := client.Do(httpReq)
 	if err != nil {
 		return nil, err
