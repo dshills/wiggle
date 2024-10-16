@@ -2,6 +2,8 @@ package openai
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 
@@ -28,12 +30,28 @@ func (ai *OpenAI) AvailableModels() ([]llm.Model, error) {
 	if err != nil {
 		return nil, err
 	}
-	// nolint
-	httpResp, err := http.Get(ep)
+
+	client := http.Client{}
+	httpReq, err := http.NewRequest(http.MethodGet, ep, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	httpReq.Header.Add("Content-Type", "application/json")
+	httpReq.Header.Add("Accept", "application/json")
+	httpReq.Header.Add("Authorization", fmt.Sprintf("Bearer %s", ai.apiKey))
+
+	httpResp, err := client.Do(httpReq)
 	if err != nil {
 		return nil, err
 	}
 	defer httpResp.Body.Close()
+
+	if httpResp.StatusCode >= 300 {
+		body, _ := io.ReadAll(httpResp.Body)
+		return nil, fmt.Errorf("OpenAI: Chat: %v %v\n%v", httpResp.StatusCode, httpResp.Status, string(body))
+	}
+
 	mods := models{}
 	if err := json.NewDecoder(httpResp.Body).Decode(&mods); err != nil {
 		return nil, err
